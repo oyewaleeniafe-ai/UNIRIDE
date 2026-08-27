@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import PasswordInput from '@/components/password-input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -85,14 +86,13 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                 placeholder="Enter your password"
+                autoComplete="current-password"
               />
             </div>
 

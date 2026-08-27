@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { registerStudent } from '@/lib/actions/auth';
+import PasswordInput from '@/components/password-input';
 
 export default function RegisterStudentPage() {
   const router = useRouter();
@@ -109,26 +110,24 @@ export default function RegisterStudentPage() {
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={form.password}
                 onChange={(e) => updateField('password', e.target.value)}
                 required
                 minLength={8}
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 placeholder="At least 8 characters"
+                autoComplete="new-password"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Confirm Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={form.confirmPassword}
                 onChange={(e) => updateField('confirmPassword', e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 placeholder="Repeat your password"
+                autoComplete="new-password"
               />
             </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { registerDriver } from '@/lib/actions/auth';
+import PasswordInput from '@/components/password-input';
 
 export default function RegisterDriverPage() {
   const router = useRouter();
@@ -89,14 +90,12 @@ export default function RegisterDriverPage() {
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Password</label>
-              <input type="password" value={form.password} onChange={(e) => updateField('password', e.target.value)} required minLength={8}
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+              <PasswordInput value={form.password} onChange={(e) => updateField('password', e.target.value)} required minLength={8} placeholder="At least 8 characters" autoComplete="new-password" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Confirm Password</label>
-              <input type="password" value={form.confirmPassword} onChange={(e) => updateField('confirmPassword', e.target.value)} required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+              <PasswordInput value={form.confirmPassword} onChange={(e) => updateField('confirmPassword', e.target.value)} required placeholder="Repeat your password" autoComplete="new-password" />
             </div>
 
             <div className="pt-2 border-t border-[var(--border)]">
