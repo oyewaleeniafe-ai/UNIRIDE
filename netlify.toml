@@ -9,6 +9,12 @@
   package = "@netlify/plugin-nextjs"
 
 [[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
   for = "/api/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
