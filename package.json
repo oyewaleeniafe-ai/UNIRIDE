@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.0",
+    "@netlify/plugin-nextjs": "^5.15.13",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
