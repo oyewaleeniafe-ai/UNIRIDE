@@ -265,3 +265,16 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
+
+model PushToken {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  token       String   @unique
+  platform    String   @default("web")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastUsedAt  DateTime @default(now()) @map("last_used_at")
+
+  @@index([userId])
+  @@map("push_tokens")
+}

@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/components/session-provider";
 import ServiceWorkerRegistration from "@/components/service-worker-registration";
 import OfflineBanner from "@/components/offline-banner";
+import PushNotificationProvider from "@/components/push-notification-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,7 +49,9 @@ export default function RootLayout({
         <OfflineBanner />
         <ThemeProvider>
           <SessionProvider>
-            {children}
+            <PushNotificationProvider>
+              {children}
+            </PushNotificationProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>
