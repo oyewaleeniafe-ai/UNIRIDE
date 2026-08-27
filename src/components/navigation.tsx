@@ -34,8 +34,31 @@ export default function Navigation({ role }: { role: string }) {
 
   return (
     <>
+      {/* Top navigation bar — visible on all screens */}
+      <header className="fixed top-0 left-0 right-0 h-12 bg-[var(--surface)] border-b border-[var(--border)] z-50 flex items-center justify-between px-4 lg:pl-56">
+        <h1 className="text-sm font-bold text-[var(--foreground)] lg:hidden">Campus Cab</h1>
+        <div className="hidden lg:block" />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors font-medium"
+            aria-label={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span className="text-base">{resolvedTheme === 'dark' ? '☀' : '☾'}</span>
+            <span className="hidden sm:inline">{resolvedTheme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--border)] text-sm text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+          >
+            <span className="text-base">⏻</span>
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
+      </header>
+
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-56 bg-[var(--surface)] border-r border-[var(--border)] h-screen sticky top-0">
+      <aside className="hidden lg:flex flex-col w-56 bg-[var(--surface)] border-r border-[var(--border)] h-screen sticky top-0 pt-12">
         <div className="px-4 py-4 border-b border-[var(--border)]">
           <h1 className="text-sm font-bold text-[var(--foreground)]">Campus Cab</h1>
           <p className="text-xs text-[var(--muted)] mt-0.5">{role === 'STUDENT' ? 'Passenger Portal' : 'Driver Portal'}</p>
@@ -61,14 +84,7 @@ export default function Navigation({ role }: { role: string }) {
           })}
         </nav>
 
-        <div className="px-2 py-3 border-t border-[var(--border)] space-y-1">
-          <button
-            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            className="flex items-center gap-2.5 px-3 py-2 rounded text-sm text-[var(--muted-foreground)] hover:bg-[var(--surface-hover)] w-full text-left"
-          >
-            <span className="w-5 text-center text-xs">{resolvedTheme === 'dark' ? '☀' : '☾'}</span>
-            {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
-          </button>
+        <div className="px-2 py-3 border-t border-[var(--border)]">
           <button
             onClick={() => signOut({ callbackUrl: '/login' })}
             className="flex items-center gap-2.5 px-3 py-2 rounded text-sm text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left"

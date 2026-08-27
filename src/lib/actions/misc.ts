@@ -22,7 +22,9 @@ export async function submitRating(data: {
   const trip = await prisma.trip.findUnique({ where: { id: data.tripId } });
   if (!trip) return { error: 'Trip not found.' };
   if (trip.status !== 'COMPLETED') return { error: 'Can only rate completed trips.' };
-  if (trip.studentId !== userId) return { error: 'You can only rate your own trips.' };
+  
+  const student = await prisma.student.findUnique({ where: { userId } });
+  if (!student || trip.studentId !== student.id) return { error: 'You can only rate your own trips.' };
   if (!trip.driverId) return { error: 'No driver assigned to this trip.' };
 
   const existing = await prisma.rating.findFirst({
@@ -99,8 +101,11 @@ export async function sendSOS(data: { latitude?: number; longitude?: number; not
 
   const userId = await getUserId();
 
+  const student = await prisma.student.findUnique({ where: { userId } });
+  const studentId = student?.id;
+
   const activeTrip = await prisma.trip.findFirst({
-    where: { studentId: userId, status: { in: ['ACCEPTED', 'IN_PROGRESS'] } },
+    where: { studentId: studentId || '__none__', status: { in: ['ACCEPTED', 'IN_PROGRESS'] } },
     include: { pickupLocation: true, dropoffLocation: true },
   });
 

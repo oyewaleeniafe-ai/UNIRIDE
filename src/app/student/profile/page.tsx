@@ -11,8 +11,9 @@ export default async function StudentProfilePage() {
     include: { student: true },
   });
 
-  const tripCount = await prisma.trip.count({ where: { studentId: userId } });
-  const completedCount = await prisma.trip.count({ where: { studentId: userId, status: 'COMPLETED' } });
+  const studentId = user?.student?.id;
+  const tripCount = await prisma.trip.count({ where: { studentId: studentId || '__none__' } });
+  const completedCount = await prisma.trip.count({ where: { studentId: studentId || '__none__', status: 'COMPLETED' } });
 
   return (
     <div className="p-4 lg:p-6 max-w-2xl mx-auto">

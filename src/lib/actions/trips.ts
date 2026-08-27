@@ -51,9 +51,14 @@ export async function createTrip(data: {
   const totalFare = data.passengerCount * FARE_PER_PASSENGER;
   const userId = await getUserId();
 
+  const student = await prisma.student.findUnique({ where: { userId } });
+  if (!student) {
+    return { error: 'Student profile not found. Please contact support.' };
+  }
+
   const trip = await prisma.trip.create({
     data: {
-      studentId: userId,
+      studentId: student.id,
       pickupLocationId: data.pickupLocationId,
       dropoffLocationId: data.dropoffLocationId,
       passengerCount: data.passengerCount,
@@ -148,9 +153,11 @@ export async function acceptTrip(tripId: string) {
         data: { tripId, userId, from: 'PENDING', to: 'ACCEPTED' },
       });
 
+      // Look up student's User record for notification
+      const studentForNotif = await tx.student.findUnique({ where: { id: updated.studentId } });
       await tx.notification.create({
         data: {
-          userId: updated.studentId,
+          userId: studentForNotif?.userId ?? updated.studentId,
           title: 'Ride Accepted',
           message: `Your ride from ${updated.pickupLocation.name} to ${updated.dropoffLocation.name} has been accepted.`,
           type: 'RIDE_ACCEPTED',
@@ -175,11 +182,12 @@ export async function acceptTrip(tripId: string) {
     }).catch(() => {});
 
     // Send email notification (non-blocking)
-    const student = await prisma.user.findUnique({ where: { id: result.studentId } });
-    if (student?.email) {
+    const studentRecord = await prisma.student.findUnique({ where: { id: result.studentId } });
+    const studentUser = studentRecord ? await prisma.user.findUnique({ where: { id: studentRecord.userId } }) : null;
+    if (studentUser?.email) {
       sendRideAcceptedEmail({
-        to: student.email,
-        studentName: student.name,
+        to: studentUser.email,
+        studentName: studentUser.name,
         driverName: session.user.name || 'Driver',
         pickup: result.pickupLocation.name,
         dropoff: result.dropoffLocation.name,
@@ -235,9 +243,12 @@ export async function startTrip(tripId: string) {
     dropoff: updated.dropoffLocation.name,
   }).catch(() => {});
 
+  // Look up student's User record for notifications
+  const studentForNotif = await prisma.student.findUnique({ where: { id: trip.studentId } });
+  const studentUserIdForNotif = studentForNotif?.userId ?? trip.studentId;
   await prisma.notification.create({
     data: {
-      userId: trip.studentId,
+      userId: studentUserIdForNotif,
       title: 'Ride Started',
       message: `Your ride from ${updated.pickupLocation.name} to ${updated.dropoffLocation.name} has started.`,
       type: 'RIDE_STARTED',
@@ -245,11 +256,11 @@ export async function startTrip(tripId: string) {
   });
 
   // Send email (non-blocking)
-  const student = await prisma.user.findUnique({ where: { id: trip.studentId } });
-  if (student?.email && driverUser) {
+  const studentUser = studentForNotif ? await prisma.user.findUnique({ where: { id: studentForNotif.userId } }) : null;
+  if (studentUser?.email && driverUser) {
     sendRideStartedEmail({
-      to: student.email,
-      studentName: student.name,
+      to: studentUser.email,
+      studentName: studentUser.name,
       driverName: driverUser.name,
       pickup: updated.pickupLocation.name,
       dropoff: updated.dropoffLocation.name,
@@ -300,9 +311,12 @@ export async function completeTrip(tripId: string) {
     dropoff: updated.dropoffLocation.name,
   }).catch(() => {});
 
+  // Look up student's User record for notifications and email
+  const studentRec = await prisma.student.findUnique({ where: { id: trip.studentId } });
+  const studentUserId = studentRec?.userId ?? trip.studentId;
   await prisma.notification.create({
     data: {
-      userId: trip.studentId,
+      userId: studentUserId,
       title: 'Ride Completed',
       message: `Your ride from ${updated.pickupLocation.name} to ${updated.dropoffLocation.name} has been completed.`,
       type: 'RIDE_COMPLETED',
@@ -310,11 +324,11 @@ export async function completeTrip(tripId: string) {
   });
 
   // Send email (non-blocking)
-  const student = await prisma.user.findUnique({ where: { id: trip.studentId } });
-  if (student?.email && driverUser) {
+  const studentUser = studentRec ? await prisma.user.findUnique({ where: { id: studentRec.userId } }) : null;
+  if (studentUser?.email && driverUser) {
     sendRideCompletedEmail({
-      to: student.email,
-      studentName: student.name,
+      to: studentUser.email,
+      studentName: studentUser.name,
       driverName: driverUser.name,
       pickup: updated.pickupLocation.name,
       dropoff: updated.dropoffLocation.name,
@@ -332,7 +346,9 @@ export async function cancelTrip(tripId: string) {
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
   if (!trip) return { error: 'Trip not found.' };
 
-  const isStudent = trip.studentId === userId;
+  // Check if this user is the student for this trip
+  const tripStudent = await prisma.student.findUnique({ where: { id: trip.studentId } });
+  const isStudent = tripStudent?.userId === userId;
 
   if (!isStudent && trip.driverId === null) {
     return { error: 'You are not part of this trip.' };
@@ -393,16 +409,19 @@ export async function cancelTrip(tripId: string) {
       }
     }
   } else if (!isStudent && trip.driverId) {
+    // Look up student's User record for notification and email
+    const cancelStudentRec = await prisma.student.findUnique({ where: { id: trip.studentId } });
+    const cancelStudentUserId = cancelStudentRec?.userId ?? trip.studentId;
     await prisma.notification.create({
       data: {
-        userId: trip.studentId,
+        userId: cancelStudentUserId,
         title: 'Ride Cancelled',
         message: 'Your ride has been cancelled by the driver.',
         type: 'RIDE_CANCELLED',
       },
     });
 
-    const studentUser = await prisma.user.findUnique({ where: { id: trip.studentId } });
+    const studentUser = cancelStudentRec ? await prisma.user.findUnique({ where: { id: cancelStudentRec.userId } }) : null;
     if (studentUser?.email) {
       sendRideCancelledEmail({
         to: studentUser.email,

@@ -7,9 +7,12 @@ export default async function StudentRidesPage() {
   const session = await auth();
   const userId = (session?.user as { id: string })?.id;
 
+  const student = await prisma.student.findUnique({ where: { userId } });
+  const studentId = student?.id;
+
   const activeTrip = await prisma.trip.findFirst({
     where: {
-      studentId: userId,
+      studentId: studentId || '__none__',
       status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
     },
     include: {
@@ -21,7 +24,7 @@ export default async function StudentRidesPage() {
   });
 
   const completedTrips = await prisma.trip.findMany({
-    where: { studentId: userId, status: 'COMPLETED' },
+    where: { studentId: studentId || '__none__', status: 'COMPLETED' },
     include: {
       pickupLocation: true,
       dropoffLocation: true,
@@ -33,7 +36,7 @@ export default async function StudentRidesPage() {
   });
 
   const cancelledTrips = await prisma.trip.findMany({
-    where: { studentId: userId, status: 'CANCELLED' },
+    where: { studentId: studentId || '__none__', status: 'CANCELLED' },
     include: {
       pickupLocation: true,
       dropoffLocation: true,

@@ -14,9 +14,11 @@ export default async function StudentDashboard() {
     },
   });
 
+  const studentId = user?.student?.id;
+
   const activeTrip = await prisma.trip.findFirst({
     where: {
-      studentId: userId,
+      studentId: studentId || '__none__',
       status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
     },
     include: {
@@ -28,7 +30,7 @@ export default async function StudentDashboard() {
   });
 
   const recentTrips = await prisma.trip.findMany({
-    where: { studentId: userId, status: 'COMPLETED' },
+    where: { studentId: studentId || '__none__', status: 'COMPLETED' },
     include: {
       pickupLocation: true,
       dropoffLocation: true,
@@ -45,7 +47,7 @@ export default async function StudentDashboard() {
   });
 
   const totalTrips = await prisma.trip.count({
-    where: { studentId: userId, status: 'COMPLETED' },
+    where: { studentId: studentId || '__none__', status: 'COMPLETED' },
   });
 
   return (
