@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border-color);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-text: var(--primary-text);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-fg);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #f8f9fa;
+  --foreground: #1a1a1a;
+  --surface: #ffffff;
+  --surface-hover: #f0f1f3;
+  --border-color: #dee2e6;
+  --primary: #1a56db;
+  --primary-hover: #1648b8;
+  --primary-text: #ffffff;
+  --muted: #6c757d;
+  --muted-fg: #868e96;
+  --danger: #dc3545;
+  --danger-hover: #c82333;
+  --success: #28a745;
+  --warning: #ffc107;
+}
+
+.dark {
+  --background: #111318;
+  --foreground: #e4e6ea;
+  --surface: #1c1e24;
+  --surface-hover: #26282f;
+  --border-color: #2e3138;
+  --primary: #4d8cf5;
+  --primary-hover: #6ba0f7;
+  --primary-text: #111318;
+  --muted: #868e96;
+  --muted-fg: #6c757d;
+  --danger: #e85d6c;
+  --danger-hover: #f07080;
+  --success: #4cce6a;
+  --warning: #fcd34d;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--primary);
+  color: var(--primary-text);
+}

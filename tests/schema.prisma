@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/test-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./test.db"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  role          String    @default("STUDENT")
+  name          String
+  phone         String
+  profileImage  String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  student          Student?
+  driver           Driver?
+  notifications    Notification[]
+  safetyAlerts     SafetyAlert[]   @relation("UserSafetyAlerts")
+  rideStatusHistory RideStatusHistory[]
+  preferences      UserPreference?
+  auditLogs        AuditLog[]
+}
+
+model Student {
+  id          String  @id @default(uuid())
+  userId      String  @unique
+  matricNo    String  @unique
+  university  String  @default("University")
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trips       Trip[]
+}
+
+model Driver {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  driverId        String  @unique
+  isOnline        Boolean @default(false)
+  avgRating       Float   @default(0)
+  totalTrips      Int     @default(0)
+
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle?
+  inspections     VehicleInspection[]
+  assignedTrips   Trip[]
+  ratings         Rating[]
+}
+
+model Vehicle {
+  id          String  @id @default(uuid())
+  driverId    String  @unique
+  make        String
+  model       String
+  color       String
+  licensePlate String
+
+  driver      Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+}
+
+model CampusLocation {
+  id    String @id @default(uuid())
+  name  String @unique
+  lat   Float?
+  lng   Float?
+
+  pickupTrips     Trip[] @relation("PickupLocation")
+  dropoffTrips    Trip[] @relation("DropoffLocation")
+}
+
+model Trip {
+  id                String      @id @default(uuid())
+  studentId         String
+  driverId          String?
+  pickupLocationId  String
+  dropoffLocationId String
+  rideType          String      @default("SOLO_QUICK_CAB")
+  passengerCount    Int
+  totalFare         Float
+  status            String      @default("PENDING")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  student         Student          @relation(fields: [studentId], references: [id])
+  driver          Driver?          @relation(fields: [driverId], references: [id])
+  pickupLocation  CampusLocation   @relation("PickupLocation", fields: [pickupLocationId], references: [id])
+  dropoffLocation CampusLocation   @relation("DropoffLocation", fields: [dropoffLocationId], references: [id])
+  passengers      TripPassenger[]
+  statusHistory   RideStatusHistory[]
+  ratings         Rating[]
+  safetyAlerts    SafetyAlert[]
+
+  @@index([status])
+  @@index([driverId])
+  @@index([studentId])
+}
+
+model TripPassenger {
+  id        String  @id @default(uuid())
+  tripId    String
+  userId    String
+  seatNo    Int?
+
+  trip      Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+}
+
+model VehicleInspection {
+  id              String   @id @default(uuid())
+  driverId        String
+  brakes          Boolean  @default(false)
+  tires           Boolean  @default(false)
+  lights          Boolean  @default(false)
+  interiorClean   Boolean  @default(false)
+  noTrash         Boolean  @default(false)
+  fireExtinguisher Boolean @default(false)
+  firstAidKit     Boolean  @default(false)
+  fuelBattery     Boolean  @default(false)
+  status          String   @default("DRAFT")
+  createdAt       DateTime @default(now())
+
+  driver          Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model SafetyAlert {
+  id            String    @id @default(uuid())
+  userId        String
+  tripId        String?
+  latitude      Float?
+  longitude     Float?
+  status        String    @default("PENDING")
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation("UserSafetyAlerts", fields: [userId], references: [id])
+  trip          Trip?     @relation(fields: [tripId], references: [id])
+}
+
+model RideStatusHistory {
+  id        String   @id @default(uuid())
+  tripId    String
+  userId    String
+  from      String
+  to        String
+  createdAt DateTime @default(now())
+
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  tripId    String
+  driverId  String
+  userId    String
+  score     Int
+  feedback  String?
+  createdAt DateTime @default(now())
+
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  driver    Driver   @relation(fields: [driverId], references: [id])
+
+  @@unique([tripId, userId])
+}
+
+model UserPreference {
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  theme     String  @default("system")
+  updatedAt DateTime @updatedAt
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  action      String
+  entity      String
+  entityId    String?
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

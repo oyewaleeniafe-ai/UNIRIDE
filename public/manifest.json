@@ -1,0 +1,21 @@
+{
+  "name": "Campus Cab & Shuttle RideBook",
+  "short_name": "RideBook",
+  "description": "University transportation platform - book campus cabs, shuttles, and carpools",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#1a56db",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "appId": "com.campuscab.ridebook",
+  "appName": "Campus Cab",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https",
+    "url": "http://10.0.2.2:3000",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#1a56db",
+      "showSpinner": true,
+      "spinnerColor": "#ffffff"
+    },
+    "Geolocation": {
+      "backgroundLocationIndicatorDisabled": false
+    }
+  }
+}

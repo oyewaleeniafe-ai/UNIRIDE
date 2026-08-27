@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────
+
+enum UserRole {
+  STUDENT
+  DRIVER
+}
+
+enum RideType {
+  SOLO_QUICK_CAB
+  SHARED_SHUTTLE
+  LATE_NIGHT_SAFE_RIDE
+}
+
+enum RideStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum InspectionStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum SafetyAlertStatus {
+  PENDING
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+// ─── Models ───────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          UserRole
+  name          String
+  phone         String
+  profileImage  String?   @map("profile_image")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  student          Student?
+  driver           Driver?
+  notifications    Notification[]
+  safetyAlerts     SafetyAlert[]   @relation("UserSafetyAlerts")
+  rideStatusHistory RideStatusHistory[]
+  preferences      UserPreference?
+
+  @@map("users")
+}
+
+model Student {
+  id          String  @id @default(uuid()) @db.Uuid
+  userId      String  @unique @map("user_id") @db.Uuid
+  matricNo    String  @unique @map("matric_no")
+  university  String  @default("University")
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trips       Trip[]
+
+  @@map("students")
+}
+
+model Driver {
+  id              String  @id @default(uuid()) @db.Uuid
+  userId          String  @unique @map("user_id") @db.Uuid
+  driverId        String  @unique @map("driver_id")
+  isOnline        Boolean @default(false) @map("is_online")
+  avgRating       Float   @default(0) @map("avg_rating")
+  totalTrips      Int     @default(0) @map("total_trips")
+
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle?
+  inspections     VehicleInspection[]
+  assignedTrips   Trip[]
+  ratings         Rating[]
+
+  @@map("drivers")
+}
+
+model Vehicle {
+  id          String  @id @default(uuid()) @db.Uuid
+  driverId    String  @unique @map("driver_id") @db.Uuid
+  make        String
+  model       String
+  color       String
+  licensePlate String @map("license_plate")
+
+  driver      Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@map("vehicles")
+}
+
+model CampusLocation {
+  id    String @id @default(uuid()) @db.Uuid
+  name  String @unique
+  lat   Float?
+  lng   Float?
+
+  pickupTrips     Trip[] @relation("PickupLocation")
+  dropoffTrips    Trip[] @relation("DropoffLocation")
+
+  @@map("campus_locations")
+}
+
+model Trip {
+  id                String      @id @default(uuid()) @db.Uuid
+  studentId         String      @map("student_id") @db.Uuid
+  driverId          String?     @map("driver_id") @db.Uuid
+  pickupLocationId  String      @map("pickup_location_id") @db.Uuid
+  dropoffLocationId String      @map("dropoff_location_id") @db.Uuid
+  rideType          RideType    @map("ride_type")
+  passengerCount    Int         @map("passenger_count")
+  totalFare         Float       @map("total_fare")
+  status            RideStatus  @default(PENDING)
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  student         Student          @relation(fields: [studentId], references: [id])
+  driver          Driver?          @relation(fields: [driverId], references: [id])
+  pickupLocation  CampusLocation   @relation("PickupLocation", fields: [pickupLocationId], references: [id])
+  dropoffLocation CampusLocation   @relation("DropoffLocation", fields: [dropoffLocationId], references: [id])
+  passengers      TripPassenger[]
+  statusHistory   RideStatusHistory[]
+  ratings         Rating[]
+  safetyAlerts    SafetyAlert[]
+
+  @@index([status])
+  @@index([driverId])
+  @@index([studentId])
+  @@map("trips")
+}
+
+model TripPassenger {
+  id        String  @id @default(uuid()) @db.Uuid
+  tripId    String  @map("trip_id") @db.Uuid
+  userId    String  @map("user_id") @db.Uuid
+  seatNo    Int?    @map("seat_no")
+
+  trip      Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@map("trip_passengers")
+}
+
+model VehicleInspection {
+  id              String            @id @default(uuid()) @db.Uuid
+  driverId        String            @map("driver_id") @db.Uuid
+  brakes          Boolean           @default(false)
+  tires           Boolean           @default(false)
+  lights          Boolean           @default(false)
+  interiorClean   Boolean           @default(false) @map("interior_clean")
+  noTrash         Boolean           @default(false) @map("no_trash")
+  fireExtinguisher Boolean          @default(false) @map("fire_extinguisher")
+  firstAidKit     Boolean           @default(false) @map("first_aid_kit")
+  fuelBattery     Boolean           @default(false) @map("fuel_battery_above_50")
+  status          InspectionStatus  @default(DRAFT)
+  createdAt       DateTime          @default(now()) @map("created_at")
+
+  driver          Driver            @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_inspections")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  type      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model SafetyAlert {
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  tripId        String?           @map("trip_id") @db.Uuid
+  latitude      Float?
+  longitude     Float?
+  status        SafetyAlertStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  user          User              @relation("UserSafetyAlerts", fields: [userId], references: [id])
+  trip          Trip?             @relation(fields: [tripId], references: [id])
+
+  @@map("safety_alerts")
+}
+
+model RideStatusHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  tripId    String   @map("trip_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  from      RideStatus
+  to        RideStatus
+  createdAt DateTime @default(now()) @map("created_at")
+
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("ride_status_history")
+}
+
+model Rating {
+  id        String   @id @default(uuid()) @db.Uuid
+  tripId    String   @map("trip_id") @db.Uuid
+  driverId  String   @map("driver_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  score     Int
+  feedback  String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  driver    Driver   @relation(fields: [driverId], references: [id])
+
+  @@unique([tripId, userId])
+  @@map("ratings")
+}
+
+model UserPreference {
+  id        String  @id @default(uuid()) @db.Uuid
+  userId    String  @unique @map("user_id") @db.Uuid
+  theme     String  @default("system")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  action      String
+  entity      String
+  entityId    String?  @map("entity_id") @db.Uuid
+  details     Json?
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
