@@ -6,6 +6,7 @@ import { SessionProvider } from "@/components/session-provider";
 import ServiceWorkerRegistration from "@/components/service-worker-registration";
 import OfflineBanner from "@/components/offline-banner";
 import PushNotificationProvider from "@/components/push-notification-provider";
+import Footer from "@/components/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,7 +51,10 @@ export default function RootLayout({
         <ThemeProvider>
           <SessionProvider>
             <PushNotificationProvider>
-              {children}
+              <div className="flex flex-col min-h-screen">
+                <div className="flex-1">{children}</div>
+                <Footer />
+              </div>
             </PushNotificationProvider>
           </SessionProvider>
         </ThemeProvider>
