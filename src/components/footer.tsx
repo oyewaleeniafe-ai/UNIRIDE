@@ -5,6 +5,9 @@ export default function Footer() {
         <p className="text-center text-xs text-[var(--muted)]">
           &copy; {new Date().getFullYear()} Campus Cab & Shuttle RideBook. All Rights Reserved.
         </p>
+        <p className="text-center text-[10px] text-[var(--muted-fg)] mt-1">
+          Made by <span className="font-medium text-[var(--muted)]">Veltrix</span>
+        </p>
       </div>
     </footer>
   );
