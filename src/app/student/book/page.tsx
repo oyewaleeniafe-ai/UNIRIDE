@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createTrip } from '@/lib/actions/trips';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import Spinner from '@/components/spinner';
 
 interface Location {
   id: string;
@@ -11,9 +12,9 @@ interface Location {
 }
 
 const RIDE_TYPES = [
-  { value: 'SOLO_QUICK_CAB', label: 'Solo Quick Cab', desc: 'Direct ride, fastest option' },
-  { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle / Carpool', desc: 'Share with other students' },
-  { value: 'LATE_NIGHT_SAFE_RIDE', label: 'Late-Night Safe Ride', desc: 'Extra safety for late hours' },
+  { value: 'SOLO_QUICK_CAB', label: 'Solo Quick Cab', desc: 'Direct ride, fastest option', icon: '🚕' },
+  { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle / Carpool', desc: 'Share with other students', icon: '🚐' },
+  { value: 'LATE_NIGHT_SAFE_RIDE', label: 'Late-Night Safe Ride', desc: 'Extra safety for late hours', icon: '🌙' },
 ] as const;
 
 const FARE_PER_PASSENGER = 200;
@@ -22,6 +23,8 @@ export default function BookRidePage() {
   const router = useRouter();
   const { isOnline } = useOnlineStatus();
   const [locations, setLocations] = useState<Location[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsError, setLocationsError] = useState('');
   const [pickupId, setPickupId] = useState('');
   const [dropoffId, setDropoffId] = useState('');
   const [passengerCount, setPassengerCount] = useState(1);
@@ -32,14 +35,27 @@ export default function BookRidePage() {
   const [showDropoffDropdown, setShowDropoffDropdown] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [step, setStep] = useState<'pickup' | 'dropoff' | 'passengers' | 'ridetype' | 'review'>('pickup');
 
-  useEffect(() => {
-    fetch('/api/locations')
-      .then((r) => r.json())
-      .then((data) => setLocations(data.locations || []))
-      .catch(() => {});
+  const fetchLocations = useCallback(async () => {
+    setLocationsLoading(true);
+    setLocationsError('');
+    try {
+      const res = await fetch('/api/locations');
+      if (!res.ok) throw new Error('Failed to load locations');
+      const data = await res.json();
+      setLocations(data.locations || []);
+    } catch {
+      setLocationsError('Could not load campus locations. Pull down to retry.');
+    } finally {
+      setLocationsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchLocations();
+  }, [fetchLocations]);
 
   const filteredPickup = locations.filter(
     (l) => l.name.toLowerCase().includes(pickupSearch.toLowerCase())
@@ -55,17 +71,16 @@ export default function BookRidePage() {
   const handleSubmit = async () => {
     setError('');
     if (!pickupId || !dropoffId) {
-      setError('Please select both pickup and drop-off locations.');
+      setError('Please select both a pickup and drop-off location before continuing.');
       return;
     }
     if (pickupId === dropoffId) {
-      setError('Pickup and drop-off locations must be different.');
+      setError('Pickup and drop-off must be different locations. Please go back and change one.');
       return;
     }
 
-    // Check connectivity before submitting
     if (!navigator.onLine) {
-      setError('Connection lost. Your booking is waiting for confirmation. Please check your connection and try again.');
+      setError('You appear to be offline. Please check your internet connection and try again.');
       return;
     }
 
@@ -79,15 +94,79 @@ export default function BookRidePage() {
       });
       if (result.error) {
         setError(result.error);
+        setLoading(false);
         return;
       }
-      router.push('/student/rides');
-    } catch {
-      setError('Connection lost. Your booking is waiting for confirmation. Please check your connection and try again.');
-    } finally {
+      setSuccess(true);
+      setTimeout(() => router.push('/student/rides'), 1500);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+        setError('Could not reach the server. Please check your connection and try again.');
+      } else {
+        setError('Something went wrong while booking your ride. Please try again.');
+      }
       setLoading(false);
     }
   };
+
+  const handleRetry = () => {
+    setError('');
+    handleSubmit();
+  };
+
+  // ── Success overlay ──
+  if (success) {
+    return (
+      <div className="p-4 lg:p-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4 animate-bounce-in">
+          <span className="text-3xl">✓</span>
+        </div>
+        <h2 className="text-lg font-bold text-[var(--foreground)] mb-1">Booking Confirmed!</h2>
+        <p className="text-sm text-[var(--muted)]">Your ride has been requested. Redirecting…</p>
+        <div className="mt-4">
+          <Spinner size="md" className="text-[var(--primary)]" />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Location loading state ──
+  if (locationsLoading) {
+    return (
+      <div className="p-4 lg:p-6 max-w-lg mx-auto">
+        <h1 className="text-xl font-bold text-[var(--foreground)] mb-1">Book a Ride</h1>
+        <p className="text-sm text-[var(--muted)] mb-6">Select your pickup and drop-off locations</p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Spinner size="lg" className="text-[var(--primary)] mb-4" />
+          <p className="text-sm text-[var(--muted)]">Loading campus locations…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Location load error ──
+  if (locationsError) {
+    return (
+      <div className="p-4 lg:p-6 max-w-lg mx-auto">
+        <h1 className="text-xl font-bold text-[var(--foreground)] mb-1">Book a Ride</h1>
+        <p className="text-sm text-[var(--muted)] mb-6">Select your pickup and drop-off locations</p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+            <span className="text-xl">⚠</span>
+          </div>
+          <p className="text-sm text-[var(--foreground)] font-medium mb-1">Unable to load locations</p>
+          <p className="text-xs text-[var(--muted)] mb-4">{locationsError}</p>
+          <button
+            onClick={fetchLocations}
+            className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-text)] rounded-md text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 max-w-lg mx-auto">
@@ -96,18 +175,22 @@ export default function BookRidePage() {
 
       {/* Offline warning */}
       {!isOnline && (
-        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-300">
-          ⚠ You are offline. Bookings cannot be submitted until your connection is restored.
+        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-800 dark:text-yellow-300 flex items-start gap-2">
+          <span className="mt-0.5">⚠</span>
+          <div>
+            <p className="font-medium">You are offline</p>
+            <p className="text-xs mt-0.5">Bookings require an internet connection. Your selections are saved — submit when you&apos;re back online.</p>
+          </div>
         </div>
       )}
 
       {/* Progress */}
       <div className="flex items-center gap-1 mb-6">
-        {['pickup', 'dropoff', 'passengers', 'ridetype', 'review'].map((s, i) => (
+        {(['pickup', 'dropoff', 'passengers', 'ridetype', 'review'] as const).map((s, i) => (
           <div
             key={s}
             className={`h-1 flex-1 rounded transition-colors ${
-              ['pickup', 'dropoff', 'passengers', 'ridetype', 'review'].indexOf(step) >= i
+              (['pickup', 'dropoff', 'passengers', 'ridetype', 'review'] as const).indexOf(step) >= i
                 ? 'bg-[var(--primary)]'
                 : 'bg-[var(--border)]'
             }`}
@@ -115,9 +198,23 @@ export default function BookRidePage() {
         ))}
       </div>
 
+      {/* Error banner with retry */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
-          {error}
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 text-red-500">✕</span>
+            <div className="flex-1">
+              <p>{error}</p>
+              {loading === false && (
+                <button
+                  onClick={handleRetry}
+                  className="mt-2 text-xs font-medium text-red-700 dark:text-red-400 underline hover:no-underline"
+                >
+                  Retry booking
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -135,7 +232,7 @@ export default function BookRidePage() {
                 setPickupId('');
               }}
               onFocus={() => setShowPickupDropdown(true)}
-              placeholder="Search locations..."
+              placeholder="Type to search campus locations…"
               className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             />
             {showPickupDropdown && filteredPickup.length > 0 && (
@@ -157,7 +254,15 @@ export default function BookRidePage() {
                 ))}
               </div>
             )}
+            {showPickupDropdown && pickupSearch && filteredPickup.length === 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg p-3 text-center">
+                <p className="text-xs text-[var(--muted)]">No locations matching &ldquo;{pickupSearch}&rdquo;</p>
+              </div>
+            )}
           </div>
+          {showPickupDropdown && locations.length === 0 && (
+            <p className="text-xs text-[var(--muted)] mt-1">No campus locations available.</p>
+          )}
           <button
             onClick={() => { if (pickupId) setStep('dropoff'); }}
             disabled={!pickupId}
@@ -183,7 +288,7 @@ export default function BookRidePage() {
                 setDropoffId('');
               }}
               onFocus={() => setShowDropoffDropdown(true)}
-              placeholder="Search locations..."
+              placeholder="Type to search campus locations…"
               className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             />
             {showDropoffDropdown && filteredDropoff.length > 0 && (
@@ -201,6 +306,11 @@ export default function BookRidePage() {
                     {loc.name}
                   </button>
                 ))}
+              </div>
+            )}
+            {showDropoffDropdown && dropoffSearch && filteredDropoff.length === 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-md shadow-lg p-3 text-center">
+                <p className="text-xs text-[var(--muted)]">No locations matching &ldquo;{dropoffSearch}&rdquo;</p>
               </div>
             )}
           </div>
@@ -266,12 +376,15 @@ export default function BookRidePage() {
                 onClick={() => setRideType(rt.value)}
                 className={`w-full p-3 rounded-lg border text-left transition-colors ${
                   rideType === rt.value
-                    ? 'border-[var(--primary)] bg-[var(--primary)] bg-opacity-5'
+                    ? 'border-[var(--primary)] bg-[var(--primary)] bg-opacity-5 ring-1 ring-[var(--primary)]'
                     : 'border-[var(--border)] hover:border-[var(--muted)]'
                 }`}
               >
-                <p className="text-sm font-medium text-[var(--foreground)]">{rt.label}</p>
-                <p className="text-xs text-[var(--muted)]">{rt.desc}</p>
+                <div className="flex items-center gap-2">
+                  <span>{rt.icon}</span>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{rt.label}</p>
+                </div>
+                <p className="text-xs text-[var(--muted)] mt-0.5 ml-7">{rt.desc}</p>
               </button>
             ))}
           </div>
@@ -307,6 +420,7 @@ export default function BookRidePage() {
             <div className="flex justify-between text-sm">
               <span className="text-[var(--muted)]">Ride type</span>
               <span className="font-medium text-[var(--foreground)]">
+                {RIDE_TYPES.find((r) => r.value === rideType)?.icon}{' '}
                 {RIDE_TYPES.find((r) => r.value === rideType)?.label}
               </span>
             </div>
@@ -319,10 +433,25 @@ export default function BookRidePage() {
           <button
             onClick={handleSubmit}
             disabled={loading || !isOnline}
-            className="mt-4 w-full py-3 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
+            className="mt-4 w-full py-3 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
-            {loading ? 'Confirming...' : !isOnline ? 'Offline — Cannot Book' : 'Confirm Booking'}
+            {loading ? (
+              <>
+                <Spinner size="sm" className="text-[var(--primary-text)]" />
+                <span>Confirming booking…</span>
+              </>
+            ) : !isOnline ? (
+              <span>Offline — Cannot Book</span>
+            ) : (
+              <span>Confirm Booking</span>
+            )}
           </button>
+
+          {!isOnline && (
+            <p className="text-xs text-[var(--muted)] text-center mt-2">
+              Reconnect to the internet to submit this booking.
+            </p>
+          )}
         </div>
       )}
     </div>
