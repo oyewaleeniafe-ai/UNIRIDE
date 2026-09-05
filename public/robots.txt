@@ -4,4 +4,4 @@ Disallow: /student/
 Disallow: /driver/
 Disallow: /api/
 
-Sitemap: https://campus-cab.netlify.app/sitemap.xml
+Sitemap: https://uniride-41u2.vercel.app/sitemap.xml
