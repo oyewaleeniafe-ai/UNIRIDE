@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   title: "Campus Cab & Shuttle RideBook",
   description: "University transportation platform — book campus cabs, shuttles, and carpools",
   manifest: "/manifest.json",
+  other: {
+    "google-site-verification": "googlee5f34f8e98905347",
+  },
 };
 
 export const viewport: Viewport = {
