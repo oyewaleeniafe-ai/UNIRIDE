@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition, useCallback } from 'react';
-import { getActiveTripStatus } from '@/lib/actions/trips';
+import { getActiveTripStatus, cancelTrip } from '@/lib/actions/trips';
 import SOSButton from '@/components/sos-button';
 
 interface TripData {
@@ -45,12 +45,19 @@ const statusColors: Record<string, string> = {
 };
 
 const POLL_INTERVAL = 10000; // 10 seconds
+const GRACE_PERIOD_SECONDS = 30; // Must match server-side constant
 
 export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProps) {
   const [trip, setTrip] = useState<TripData>(initialTrip);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isPolling, startTransition] = useTransition();
   const [statusChanged, setStatusChanged] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const [graceTimeLeft, setGraceTimeLeft] = useState(() => {
+    const tripAge = Math.floor((Date.now() - new Date(initialTrip.createdAt).getTime()) / 1000);
+    return Math.max(0, GRACE_PERIOD_SECONDS - tripAge);
+  });
 
   const fetchStatus = useCallback(() => {
     startTransition(async () => {
@@ -71,12 +78,49 @@ export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProp
     });
   }, [trip.status]);
 
+  // Grace period countdown timer
+  useEffect(() => {
+    if (graceTimeLeft <= 0 || trip.status !== 'PENDING') return;
+
+    const timer = setInterval(() => {
+      setGraceTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [graceTimeLeft, trip.status]);
+
   useEffect(() => {
     const interval = setInterval(fetchStatus, POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
+  const handleCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    setCancelError('');
+    try {
+      const result = await cancelTrip(trip.id);
+      if (result.error) {
+        setCancelError(result.error);
+        setCancelling(false);
+        return;
+      }
+      // Refresh status to show cancelled state
+      fetchStatus();
+    } catch {
+      setCancelError('Failed to cancel trip. Please try again.');
+      setCancelling(false);
+    }
+  };
+
   const currentStepIndex = STATUS_INDEX[trip.status] ?? 0;
+  const showGracePeriod = trip.status === 'PENDING' && graceTimeLeft > 0;
 
   return (
     <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg overflow-hidden">
@@ -219,6 +263,51 @@ export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProp
             <span className="animate-pulse">●</span>
             <span>Waiting for a driver to accept your request...</span>
           </div>
+
+          {/* Grace period cancellation */}
+          {showGracePeriod && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-[var(--muted)]">Free cancellation window</span>
+                <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">
+                  {graceTimeLeft}s
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
+                  style={{ width: `${(graceTimeLeft / GRACE_PERIOD_SECONDS) * 100}%` }}
+                />
+              </div>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="w-full py-2.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel Ride (Free)'}
+              </button>
+              {cancelError && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400 text-center">{cancelError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Expired grace period - show regular cancel (with potential penalty) */}
+          {!showGracePeriod && (
+            <div className="mt-3">
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="w-full py-2.5 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel Ride'}
+              </button>
+              {cancelError && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400 text-center">{cancelError}</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

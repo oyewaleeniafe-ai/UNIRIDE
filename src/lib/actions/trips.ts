@@ -14,6 +14,7 @@ async function getRateLimitId(): Promise<string> {
 }
 
 const FARE_PER_PASSENGER = 800;
+const GRACE_PERIOD_SECONDS = 30; // Students can cancel within 30 seconds of booking
 
 export async function createTrip(data: {
   pickupLocationId: string;
@@ -379,6 +380,10 @@ export async function cancelTrip(tripId: string) {
     return { error: 'Cannot cancel a completed or cancelled trip.' };
   }
 
+  // Check if within grace period (no penalty for cancelling within 30 seconds)
+  const tripAge = Math.floor((Date.now() - trip.createdAt.getTime()) / 1000);
+  const withinGracePeriod = tripAge <= GRACE_PERIOD_SECONDS;
+
   const pickup = await prisma.campusLocation.findUnique({ where: { id: trip.pickupLocationId } });
   const dropoff = await prisma.campusLocation.findUnique({ where: { id: trip.dropoffLocationId } });
 
@@ -454,5 +459,5 @@ export async function cancelTrip(tripId: string) {
     }
   }
 
-  return { success: true, trip: updated };
+  return { success: true, trip: updated, withinGracePeriod };
 }
