@@ -18,12 +18,69 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = 'https://uniride-41u2.vercel.app';
+
 export const metadata: Metadata = {
-  title: "Campus Cab & Shuttle RideBook",
-  description: "University transportation platform — book campus cabs, shuttles, and carpools",
-  manifest: "/manifest.json",
+  title: {
+    default: 'Campus Cab — University Ride-Hailing Platform',
+    template: '%s | Campus Cab',
+  },
+  description:
+    'Book campus cabs, shuttles, and carpools instantly. Safe, affordable transportation for university students and drivers. Track rides in real-time with SOS safety features.',
+  keywords: [
+    'campus cab',
+    'university ride',
+    'student transportation',
+    'campus shuttle',
+    'carpool',
+    'ride hailing',
+    'student ride book',
+  ],
+  authors: [{ name: 'Veltrix' }],
+  creator: 'Veltrix',
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: siteUrl,
+    siteName: 'Campus Cab',
+    title: 'Campus Cab — University Ride-Hailing Platform',
+    description:
+      'Book campus cabs, shuttles, and carpools instantly. Safe, affordable transportation for university students and drivers.',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'Campus Cab — University Ride-Hailing Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Campus Cab — University Ride-Hailing Platform',
+    description:
+      'Book campus cabs, shuttles, and carpools instantly. Safe, affordable transportation for university students and drivers.',
+    images: ['/twitter-image'],
+    creator: '@veltrix',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+  },
   other: {
-    "google-site-verification": "googlee5f34f8e98905347",
+    'google-site-verification': 'googlee5f34f8e98905347',
   },
 };
 
