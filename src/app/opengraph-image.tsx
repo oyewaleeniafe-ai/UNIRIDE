@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export const alt = 'Campus Cab — University Ride-Hailing Platform';
 export const size = { width: 1200, height: 630 };
@@ -147,7 +147,7 @@ export default async function Image() {
               height: '8px',
               borderRadius: '50%',
               background: '#4ade80',
-              display: 'inline-block',
+              display: 'flex',
             }}
           />
           Book rides across campus — free for students
