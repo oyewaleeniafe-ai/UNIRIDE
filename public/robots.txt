@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /student/
+Disallow: /driver/
+Disallow: /api/
+
+Sitemap: https://campus-cab.netlify.app/sitemap.xml
