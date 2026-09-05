@@ -13,13 +13,13 @@ async function getRateLimitId(): Promise<string> {
   return h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || h.get('cf-connecting-ip') || 'unknown';
 }
 
-const FARE_PER_PASSENGER = 200;
+const FARE_PER_PASSENGER = 800;
 
 export async function createTrip(data: {
   pickupLocationId: string;
   dropoffLocationId: string;
   passengerCount: number;
-  rideType: 'SOLO_QUICK_CAB' | 'SHARED_SHUTTLE' | 'LATE_NIGHT_SAFE_RIDE';
+  rideType: 'SOLO_QUICK_CAB' | 'SHARED_SHUTTLE';
 }) {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.booking);
@@ -338,6 +338,27 @@ export async function completeTrip(tripId: string) {
   }
 
   return { success: true, trip: updated };
+}
+
+export async function getActiveTripStatus() {
+  const userId = await getUserId();
+  const student = await prisma.student.findUnique({ where: { userId } });
+  if (!student) return { trip: null };
+
+  const trip = await prisma.trip.findFirst({
+    where: {
+      studentId: student.id,
+      status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
+    },
+    include: {
+      pickupLocation: true,
+      dropoffLocation: true,
+      driver: { include: { user: true, vehicle: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return { trip };
 }
 
 export async function cancelTrip(tripId: string) {

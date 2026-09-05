@@ -14,10 +14,9 @@ interface Location {
 const RIDE_TYPES = [
   { value: 'SOLO_QUICK_CAB', label: 'Solo Quick Cab', desc: 'Direct ride, fastest option', icon: '🚕' },
   { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle / Carpool', desc: 'Share with other students', icon: '🚐' },
-  { value: 'LATE_NIGHT_SAFE_RIDE', label: 'Late-Night Safe Ride', desc: 'Extra safety for late hours', icon: '🌙' },
 ] as const;
 
-const FARE_PER_PASSENGER = 200;
+const FARE_PER_PASSENGER = 800;
 
 export default function BookRidePage() {
   const router = useRouter();
@@ -90,7 +89,7 @@ export default function BookRidePage() {
         pickupLocationId: pickupId,
         dropoffLocationId: dropoffId,
         passengerCount,
-        rideType: rideType as 'SOLO_QUICK_CAB' | 'SHARED_SHUTTLE' | 'LATE_NIGHT_SAFE_RIDE',
+        rideType: rideType as 'SOLO_QUICK_CAB' | 'SHARED_SHUTTLE',
       });
       if (result.error) {
         setError(result.error);

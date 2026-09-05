@@ -2,6 +2,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import AuditLogViewer from './audit-log';
+import SOSButton from '@/components/sos-button';
+import ActiveRideTracker from '@/components/active-ride-tracker';
 
 export default async function StudentDashboard() {
   const session = await auth();
@@ -80,46 +82,11 @@ export default async function StudentDashboard() {
         <SOSButton />
       </div>
 
-      {/* Active Ride */}
+      {/* Active Ride with Live Tracker */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Current Ride</h2>
         {activeTrip ? (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                activeTrip.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                activeTrip.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-              }`}>
-                {activeTrip.status.replace('_', ' ')}
-              </span>
-              <span className="text-xs text-[var(--muted)]">
-                {new Date(activeTrip.createdAt).toLocaleTimeString()}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-[var(--muted)] text-xs">From</span>
-                <p className="font-medium text-[var(--foreground)]">{activeTrip.pickupLocation.name}</p>
-              </div>
-              <div>
-                <span className="text-[var(--muted)] text-xs">To</span>
-                <p className="font-medium text-[var(--foreground)]">{activeTrip.dropoffLocation.name}</p>
-              </div>
-            </div>
-            {activeTrip.driver && (
-              <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                <p className="text-sm text-[var(--foreground)]">
-                  Driver: <span className="font-medium">{activeTrip.driver.user.name}</span>
-                </p>
-                {activeTrip.driver.vehicle && (
-                  <p className="text-xs text-[var(--muted)] mt-0.5">
-                    {activeTrip.driver.vehicle.make} {activeTrip.driver.vehicle.model} · {activeTrip.driver.vehicle.licensePlate}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          <ActiveRideTracker initialTrip={activeTrip as unknown as React.ComponentProps<typeof ActiveRideTracker>['initialTrip']} />
         ) : (
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 text-center">
             <p className="text-sm text-[var(--muted)]">No active ride. Ready to book?</p>
@@ -184,11 +151,4 @@ export default async function StudentDashboard() {
   );
 }
 
-function SOSButton() {
-  return (
-    <Link href="/student/dashboard#sos" className="bg-[var(--danger)] text-white p-4 rounded-lg hover:bg-[var(--danger-hover)] transition-colors">
-      <div className="text-lg font-bold">⚠</div>
-      <div className="text-sm font-medium">SOS</div>
-    </Link>
-  );
-}
+

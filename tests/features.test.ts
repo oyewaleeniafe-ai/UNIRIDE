@@ -40,7 +40,7 @@ describe('Rating System', () => {
     const dropoff = await getTestLocation('Gym');
 
     const trip = await prisma.trip.create({
-      data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 200, driverId: drv.driver!.id, status: 'COMPLETED' },
+      data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 800, driverId: drv.driver!.id, status: 'COMPLETED' },
     });
 
     const rating = await prisma.rating.create({
@@ -58,7 +58,7 @@ describe('Rating System', () => {
     const dropoff = await getTestLocation('NLT');
 
     const trip = await prisma.trip.create({
-      data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 200, driverId: drv.driver!.id, status: 'COMPLETED' },
+      data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 800, driverId: drv.driver!.id, status: 'COMPLETED' },
     });
 
     await prisma.rating.create({ data: { tripId: trip.id, driverId: drv.driver!.id, userId: user.id, score: 4 } });
@@ -77,7 +77,7 @@ describe('Rating System', () => {
       const dropoff = await getTestLocation('Gym');
 
       const trip = await prisma.trip.create({
-        data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 200, driverId: drv.driver!.id, status: 'COMPLETED' },
+        data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 800, driverId: drv.driver!.id, status: 'COMPLETED' },
       });
 
       await prisma.rating.create({ data: { tripId: trip.id, driverId: drv.driver!.id, userId: user.id, score } });
@@ -121,7 +121,7 @@ describe('SOS Alerts', () => {
     const dropoff = await getTestLocation('Library');
 
     const trip = await prisma.trip.create({
-      data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'LATE_NIGHT_SAFE_RIDE', totalFare: 200, status: 'IN_PROGRESS' },
+      data: { studentId: student!.id, pickupLocationId: pickup.id, dropoffLocationId: dropoff.id, passengerCount: 1, rideType: 'SOLO_QUICK_CAB', totalFare: 800, status: 'IN_PROGRESS' },
     });
 
     const alert = await prisma.safetyAlert.create({ data: { userId: user.id, tripId: trip.id, latitude: 6.5244, longitude: 3.3792, status: 'PENDING' } });

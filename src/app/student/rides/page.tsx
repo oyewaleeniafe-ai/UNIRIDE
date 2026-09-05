@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { submitRating } from '@/lib/actions/misc';
 import Link from 'next/link';
+import ActiveRideTracker from '@/components/active-ride-tracker';
 
 export default async function StudentRidesPage() {
   const session = await auth();
@@ -58,46 +59,11 @@ export default async function StudentRidesPage() {
       <h1 className="text-xl font-bold text-[var(--foreground)] mb-1">My Rides</h1>
       <p className="text-sm text-[var(--muted)] mb-6">View your ride history and active trips</p>
 
-      {/* Active Ride */}
+      {/* Active Ride with Live Tracker */}
       {activeTrip && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Active Ride</h2>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusColors[activeTrip.status] || ''}`}>
-                {activeTrip.status.replace('_', ' ')}
-              </span>
-              <span className="text-xs text-[var(--muted)]">
-                {new Date(activeTrip.createdAt).toLocaleString()}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-[var(--muted)] text-xs">From</span>
-                <p className="font-medium text-[var(--foreground)]">{activeTrip.pickupLocation.name}</p>
-              </div>
-              <div>
-                <span className="text-[var(--muted)] text-xs">To</span>
-                <p className="font-medium text-[var(--foreground)]">{activeTrip.dropoffLocation.name}</p>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-[var(--border)]">
-              <span className="text-sm text-[var(--muted)]">
-                {activeTrip.passengerCount} passenger{activeTrip.passengerCount > 1 ? 's' : ''}
-              </span>
-              <span className="text-sm font-bold text-[var(--foreground)]">₦{activeTrip.totalFare.toLocaleString()}</span>
-            </div>
-            {activeTrip.driver && (
-              <div className="mt-2 pt-2 border-t border-[var(--border)] text-sm">
-                <p>Driver: <span className="font-medium">{activeTrip.driver.user.name}</span></p>
-                {activeTrip.driver.vehicle && (
-                  <p className="text-xs text-[var(--muted)]">
-                    {activeTrip.driver.vehicle.make} {activeTrip.driver.vehicle.model} · {activeTrip.driver.vehicle.color} · {activeTrip.driver.vehicle.licensePlate}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+          <ActiveRideTracker initialTrip={activeTrip as unknown as React.ComponentProps<typeof ActiveRideTracker>['initialTrip']} />
         </div>
       )}
 

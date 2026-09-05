@@ -17,7 +17,6 @@ enum UserRole {
 enum RideType {
   SOLO_QUICK_CAB
   SHARED_SHUTTLE
-  LATE_NIGHT_SAFE_RIDE
 }
 
 enum RideStatus {

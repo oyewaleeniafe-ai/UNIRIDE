@@ -41,7 +41,7 @@ export const bookingSchema = z.object({
   pickupLocationId: z.string().uuid('Please select a pickup location'),
   dropoffLocationId: z.string().uuid('Please select a drop-off location'),
   passengerCount: z.number().min(1, 'At least 1 passenger').max(10, 'Maximum 10 passengers'),
-  rideType: z.enum(['SOLO_QUICK_CAB', 'SHARED_SHUTTLE', 'LATE_NIGHT_SAFE_RIDE']),
+  rideType: z.enum(['SOLO_QUICK_CAB', 'SHARED_SHUTTLE']),
 }).refine((data) => data.pickupLocationId !== data.dropoffLocationId, {
   message: 'Pickup and drop-off locations must be different',
   path: ['dropoffLocationId'],
