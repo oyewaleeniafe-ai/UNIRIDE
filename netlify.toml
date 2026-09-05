@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  DATABASE_URL = "postgresql://user:pass@localhost:5432/dummy?connection_limit=1"
 
 [[headers]]
   for = "/*"
