@@ -4,7 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  DATABASE_URL = "postgresql://user:pass@localhost:5432/dummy?connection_limit=1"
+  DATABASE_URL = "postgresql://neondb_owner:npg_uDOe0zC2idHo@ep-tiny-union-ay5gi79r-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require"
 
 [[headers]]
   for = "/*"
