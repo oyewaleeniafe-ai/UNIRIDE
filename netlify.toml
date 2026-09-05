@@ -7,6 +7,9 @@
   AUTH_SECRET = "campus-cab-production-secret-2026"
   NEXT_PUBLIC_APP_URL = "https://campus-cab.netlify.app"
 
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [[headers]]
   for = "/*"
   [headers.values]
