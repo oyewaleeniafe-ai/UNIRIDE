@@ -49,10 +49,11 @@ export const metadata: Metadata = {
       'Book campus cabs, shuttles, and carpools instantly. Safe, affordable transportation for university students and drivers.',
     images: [
       {
-        url: '/opengraph-image',
+        url: '/og-image.svg',
         width: 1200,
         height: 630,
         alt: 'Campus Cab — University Ride-Hailing Platform',
+        type: 'image/svg+xml',
       },
     ],
   },
@@ -61,7 +62,7 @@ export const metadata: Metadata = {
     title: 'Campus Cab — University Ride-Hailing Platform',
     description:
       'Book campus cabs, shuttles, and carpools instantly. Safe, affordable transportation for university students and drivers.',
-    images: ['/twitter-image'],
+    images: ['/og-image.svg'],
     creator: '@veltrix',
   },
   robots: {
