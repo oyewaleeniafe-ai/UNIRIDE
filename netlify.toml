@@ -1,10 +1,11 @@
 [build]
   command = "npx prisma generate && npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
   DATABASE_URL = "postgresql://neondb_owner:npg_uDOe0zC2idHo@ep-tiny-union-ay5gi79r-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require"
+  AUTH_SECRET = "campus-cab-production-secret-2026"
+  NEXT_PUBLIC_APP_URL = "https://campus-cab.netlify.app"
 
 [[headers]]
   for = "/*"
