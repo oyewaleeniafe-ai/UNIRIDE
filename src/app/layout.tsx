@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = 'https://uniride-41u2.vercel.app';
+const siteUrl = 'https://campuscab-pi.vercel.app';
 
 export const metadata: Metadata = {
   title: {

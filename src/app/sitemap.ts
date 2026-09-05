@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uniride-41u2.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://campuscab-pi.vercel.app';
 
   return [
     {
