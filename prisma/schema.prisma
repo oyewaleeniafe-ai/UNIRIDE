@@ -58,6 +58,8 @@ model User {
   safetyAlerts     SafetyAlert[]   @relation("UserSafetyAlerts")
   rideStatusHistory RideStatusHistory[]
   preferences      UserPreference?
+  passwordHintQuestion  String?  @map("password_hint_question")
+  passwordHintAnswer    String?  @map("password_hint_answer")
   passwordResetTokens PasswordResetToken[]
 
   @@map("users")

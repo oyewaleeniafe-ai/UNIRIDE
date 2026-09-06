@@ -14,6 +14,8 @@ export const registerStudentSchema = z.object({
   phone: z.string().min(10, 'Please enter a valid phone number'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  hintQuestion: z.string().min(3, 'Please enter a hint question'),
+  hintAnswer: z.string().min(2, 'Please enter an answer to your hint question'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -26,6 +28,8 @@ export const registerDriverSchema = z.object({
   phone: z.string().min(10, 'Please enter a valid phone number'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
+  hintQuestion: z.string().min(3, 'Please enter a hint question'),
+  hintAnswer: z.string().min(2, 'Please enter an answer to your hint question'),
   vehicleMake: z.string().min(1, 'Vehicle make is required'),
   vehicleModel: z.string().min(1, 'Vehicle model is required'),
   vehicleColor: z.string().min(1, 'Vehicle color is required'),
@@ -35,14 +39,19 @@ export const registerDriverSchema = z.object({
   path: ['confirmPassword'],
 });
 
-// ─── Password Reset ─────────────────────────────────
+// ─── Password Reset (Hint-Based) ────────────────────
 
-export const forgotPasswordSchema = z.object({
-  contact: z.string().min(1, 'Please enter your email or phone number'),
+export const forgotPasswordIdentifySchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
 });
 
-export const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
+export const forgotPasswordVerifySchema = z.object({
+  email: z.string().email(),
+  hintAnswer: z.string().min(1, 'Please enter your answer'),
+});
+
+export const forgotPasswordResetSchema = z.object({
+  resetToken: z.string().min(1, 'Reset token is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -95,8 +104,9 @@ export const inspectionSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterStudentInput = z.infer<typeof registerStudentSchema>;
 export type RegisterDriverInput = z.infer<typeof registerDriverSchema>;
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ForgotPasswordIdentifyInput = z.infer<typeof forgotPasswordIdentifySchema>;
+export type ForgotPasswordVerifyInput = z.infer<typeof forgotPasswordVerifySchema>;
+export type ForgotPasswordResetInput = z.infer<typeof forgotPasswordResetSchema>;
 export type BookingInput = z.infer<typeof bookingSchema>;
 export type RatingInput = z.infer<typeof ratingSchema>;
 export type InspectionInput = z.infer<typeof inspectionSchema>;

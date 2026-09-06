@@ -15,6 +15,8 @@ export default function RegisterStudentPage() {
     phone: '',
     password: '',
     confirmPassword: '',
+    hintQuestion: '',
+    hintAnswer: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,6 +130,35 @@ export default function RegisterStudentPage() {
                 required
                 placeholder="Repeat your password"
                 autoComplete="new-password"
+              />
+            </div>
+
+            <div className="pt-2 border-t border-[var(--border)]">
+              <p className="text-sm font-medium text-[var(--foreground)] mb-1">Password Recovery</p>
+              <p className="text-xs text-[var(--muted)] mb-3">Choose a question you&apos;ll remember. This will help you reset your password if you forget it.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Hint Question</label>
+              <input
+                type="text"
+                value={form.hintQuestion}
+                onChange={(e) => updateField('hintQuestion', e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                placeholder="e.g. What is your favorite food?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Hint Answer</label>
+              <input
+                type="text"
+                value={form.hintAnswer}
+                onChange={(e) => updateField('hintAnswer', e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                placeholder="e.g. Jollof rice"
               />
             </div>
 

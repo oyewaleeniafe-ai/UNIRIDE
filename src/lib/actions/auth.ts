@@ -2,11 +2,10 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { registerStudentSchema, registerDriverSchema, forgotPasswordSchema, resetPasswordSchema } from '@/lib/validations';
+import { registerStudentSchema, registerDriverSchema, forgotPasswordIdentifySchema, forgotPasswordVerifySchema, forgotPasswordResetSchema } from '@/lib/validations';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
 import { logAuthEvent } from '@/lib/audit';
-import { sendPasswordResetEmail } from '@/lib/email';
 
 async function getRateLimitId(): Promise<string> {
   const h = await headers();
@@ -25,6 +24,8 @@ export async function registerStudent(data: {
   phone: string;
   password: string;
   confirmPassword: string;
+  hintQuestion: string;
+  hintAnswer: string;
 }) {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.register);
@@ -48,6 +49,7 @@ export async function registerStudent(data: {
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);
+  const hintAnswerHash = await bcrypt.hash(data.hintAnswer.trim().toLowerCase(), 10);
 
   const user = await prisma.user.create({
     data: {
@@ -55,6 +57,8 @@ export async function registerStudent(data: {
       name: data.name,
       phone: data.phone,
       passwordHash,
+      passwordHintQuestion: data.hintQuestion.trim(),
+      passwordHintAnswer: hintAnswerHash,
       role: 'STUDENT',
       student: {
         create: {
@@ -81,6 +85,8 @@ export async function registerDriver(data: {
   phone: string;
   password: string;
   confirmPassword: string;
+  hintQuestion: string;
+  hintAnswer: string;
   vehicleMake: string;
   vehicleModel: string;
   vehicleColor: string;
@@ -108,6 +114,7 @@ export async function registerDriver(data: {
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);
+  const hintAnswerHash = await bcrypt.hash(data.hintAnswer.trim().toLowerCase(), 10);
 
   const user = await prisma.user.create({
     data: {
@@ -115,6 +122,8 @@ export async function registerDriver(data: {
       name: data.name,
       phone: data.phone,
       passwordHash,
+      passwordHintQuestion: data.hintQuestion.trim(),
+      passwordHintAnswer: hintAnswerHash,
       role: 'DRIVER',
       driver: {
         create: {
@@ -142,54 +151,90 @@ export async function registerDriver(data: {
   return { success: true, userId: user.id };
 }
 
-// ─── Forgot / Reset Password ─────────────────────────
+// ─── Forgot / Reset Password (Hint-Based) ───────────
 
-export async function requestPasswordReset(data: { contact: string }) {
+/**
+ * Step 1: Look up user by email, return their hint question.
+ * Does not reveal whether the account exists.
+ */
+export async function forgotPasswordIdentify(data: { email: string }) {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
   if (!limit.allowed) {
-    return { error: 'Too many reset attempts. Please try again in 15 minutes.' };
+    return { error: 'Too many attempts. Please try again in 15 minutes.' };
   }
 
-  const parsed = forgotPasswordSchema.safeParse(data);
+  const parsed = forgotPasswordIdentifySchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
-  const contact = data.contact.trim();
-  const isEmail = contact.includes('@');
+  const user = await prisma.user.findUnique({ where: { email: data.email.trim() } });
 
-  // Find user by email or phone
-  const user = isEmail
-    ? await prisma.user.findUnique({ where: { email: contact } })
-    : await prisma.user.findFirst({ where: { phone: contact } });
-
-  // Always return success to prevent user enumeration
-  if (!user) {
+  // Generic message to prevent user enumeration
+  if (!user || !user.passwordHintQuestion) {
     return {
       success: true,
-      message: 'If an account exists with that email or phone, a reset code has been generated.',
+      hintQuestion: 'What is your favorite color?',
+      message: 'If an account exists, answer the question below to verify your identity.',
     };
   }
 
-  // Generate a secure random token
-  const crypto = await import('crypto');
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  return {
+    success: true,
+    hintQuestion: user.passwordHintQuestion,
+    message: 'Answer the question below to verify your identity.',
+  };
+}
 
-  // Invalidate any previous unused tokens for this user
+/**
+ * Step 2: Verify the hint answer. If correct, return a short-lived reset token.
+ */
+export async function forgotPasswordVerify(data: { email: string; hintAnswer: string }) {
+  const rateLimitId = await getRateLimitId();
+  const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
+  if (!limit.allowed) {
+    return { error: 'Too many attempts. Please try again in 15 minutes.' };
+  }
+
+  const parsed = forgotPasswordVerifySchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: data.email.trim() } });
+
+  if (!user || !user.passwordHintAnswer) {
+    return { error: 'Incorrect answer. Please try again.' };
+  }
+
+  // Compare with normalized input (lowercase, trimmed)
+  const answerMatches = await bcrypt.compare(
+    data.hintAnswer.trim().toLowerCase(),
+    user.passwordHintAnswer
+  );
+
+  if (!answerMatches) {
+    return { error: 'Incorrect answer. Please try again.' };
+  }
+
+  // Invalidate any previous unused tokens
   await prisma.passwordResetToken.updateMany({
     where: { userId: user.id, usedAt: null },
     data: { usedAt: new Date() },
   });
 
-  // Create the new reset token
+  // Generate a short-lived reset token (15 minutes)
+  const crypto = await import('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
   await prisma.passwordResetToken.create({
     data: {
       userId: user.id,
       token,
-      method: isEmail ? 'email' : 'phone',
-      contact,
+      method: 'hint',
+      contact: data.email.trim(),
       expiresAt,
     },
   });
@@ -200,26 +245,18 @@ export async function requestPasswordReset(data: { contact: string }) {
     email: user.email,
   }).catch(() => {});
 
-  // Send the reset email via Resend
-  if (isEmail) {
-    await sendPasswordResetEmail({
-      to: contact,
-      userName: user.name,
-      token,
-      expiresAt,
-    });
-  }
-
-  // Always return the same message whether we sent email or not
-  const channel = isEmail ? 'email' : 'phone';
   return {
     success: true,
-    message: `If an account exists with that ${channel}, a reset link has been sent. Please check your ${channel}.`,
+    resetToken: token,
+    message: 'Identity verified. You may now set a new password.',
   };
 }
 
-export async function resetPassword(data: {
-  token: string;
+/**
+ * Step 3: Reset the password using the token from step 2.
+ */
+export async function forgotPasswordReset(data: {
+  resetToken: string;
   password: string;
   confirmPassword: string;
 }) {
@@ -229,14 +266,13 @@ export async function resetPassword(data: {
     return { error: 'Too many attempts. Please try again in 15 minutes.' };
   }
 
-  const parsed = resetPasswordSchema.safeParse(data);
+  const parsed = forgotPasswordResetSchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
 
-  // Find the token
   const resetToken = await prisma.passwordResetToken.findUnique({
-    where: { token: data.token },
+    where: { token: data.resetToken },
   });
 
   if (!resetToken || resetToken.usedAt) {
@@ -244,13 +280,11 @@ export async function resetPassword(data: {
   }
 
   if (new Date() > resetToken.expiresAt) {
-    return { error: 'Reset token has expired. Please request a new one.' };
+    return { error: 'Reset token has expired. Please start the recovery process again.' };
   }
 
-  // Hash the new password
   const passwordHash = await bcrypt.hash(data.password, 12);
 
-  // Update password and mark token as used in a transaction
   await prisma.$transaction([
     prisma.user.update({
       where: { id: resetToken.userId },
