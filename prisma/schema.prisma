@@ -58,6 +58,7 @@ model User {
   safetyAlerts     SafetyAlert[]   @relation("UserSafetyAlerts")
   rideStatusHistory RideStatusHistory[]
   preferences      UserPreference?
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -276,4 +277,21 @@ model PushToken {
 
   @@index([userId])
   @@map("push_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  method    String   // "email" or "phone"
+  contact   String   // the email or phone used to request
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
 }

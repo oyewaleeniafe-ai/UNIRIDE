@@ -15,6 +15,8 @@ export type AuditAction =
   | 'auth.login'
   | 'auth.register'
   | 'auth.logout'
+  | 'auth.password_reset_request'
+  | 'auth.password_reset_complete'
   // Driver actions
   | 'driver.went_online'
   | 'driver.went_offline'

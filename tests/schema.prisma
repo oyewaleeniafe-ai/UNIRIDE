@@ -26,6 +26,7 @@ model User {
   safetyAlerts     SafetyAlert[]   @relation("UserSafetyAlerts")
   rideStatusHistory RideStatusHistory[]
   preferences      UserPreference?
+  passwordResetTokens PasswordResetToken[]
   auditLogs        AuditLog[]
 }
 
@@ -211,4 +212,20 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  method    String
+  contact   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime    @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
 }

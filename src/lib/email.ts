@@ -243,3 +243,40 @@ export async function sendSOSConfirmationEmail(data: {
     html: baseTemplate('SOS Alert Recorded', content),
   });
 }
+
+// ─── Password Reset Email ─────────────────────────────
+
+export async function sendPasswordResetEmail(data: {
+  to: string;
+  userName: string;
+  token: string;
+  expiresAt: Date;
+}) {
+  if (!resend) {
+    console.log('[EMAIL] Resend not configured — skipping password reset email');
+    return;
+  }
+
+  const resetUrl = `${APP_URL}/reset-password?token=${data.token}`;
+  const minutesLeft = Math.max(0, Math.round((data.expiresAt.getTime() - Date.now()) / 60000));
+
+  const content = `
+    <p style="color:#1a1a1a;font-size:14px;margin:0 0 16px;">Hi ${data.userName},</p>
+    <p style="color:#1a1a1a;font-size:14px;margin:0 0 16px;">We received a request to reset your password. Click the button below to set a new password:</p>
+    <div style="text-align:center;margin:0 0 16px;">
+      <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#1a56db;color:white;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Reset Password</a>
+    </div>
+    <p style="color:#6c757d;font-size:13px;margin:0 0 16px;">This link expires in ${minutesLeft} minutes. If you didn't request this, you can safely ignore this email.</p>
+    <div style="background:#f8f9fa;border-radius:6px;padding:12px;margin:0 0 16px;">
+      <p style="color:#6c757d;font-size:12px;margin:0 0 4px;">If the button doesn't work, copy and paste this link into your browser:</p>
+      <p style="color:#1a56db;font-size:12px;margin:0;word-break:break-all;">${resetUrl}</p>
+    </div>
+  `;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: data.to,
+    subject: 'Reset your Campus Cab password',
+    html: baseTemplate('Password Reset Request', content),
+  });
+}

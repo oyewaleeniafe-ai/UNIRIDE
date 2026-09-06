@@ -35,6 +35,21 @@ export const registerDriverSchema = z.object({
   path: ['confirmPassword'],
 });
 
+// ─── Password Reset ─────────────────────────────────
+
+export const forgotPasswordSchema = z.object({
+  contact: z.string().min(1, 'Please enter your email or phone number'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
 // ─── Booking ──────────────────────────────────────────
 
 export const bookingSchema = z.object({
@@ -80,6 +95,8 @@ export const inspectionSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterStudentInput = z.infer<typeof registerStudentSchema>;
 export type RegisterDriverInput = z.infer<typeof registerDriverSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type BookingInput = z.infer<typeof bookingSchema>;
 export type RatingInput = z.infer<typeof ratingSchema>;
 export type InspectionInput = z.infer<typeof inspectionSchema>;
