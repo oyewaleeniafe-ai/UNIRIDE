@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { loginUser } from '@/lib/actions/auth';
 import PasswordInput from '@/components/password-input';
 
 export default function LoginPage() {
@@ -11,26 +12,38 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setShowForgotPassword(false);
     setLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await loginUser({ email, password });
+
+      if (!result.success) {
+        setError(result.message || 'Unable to log in. Please try again.');
+        if (result.code === 'INVALID_PASSWORD') {
+          setShowForgotPassword(true);
+        }
+        return;
+      }
+
+      // Credentials validated server-side — now establish the NextAuth session
+      const signInResult = await signIn('credentials', {
         email,
         password,
         redirect: false,
       });
 
-      if (result?.error) {
-        setError('Incorrect email or password. Please check your credentials and try again.');
+      if (signInResult?.error) {
+        setError('Unable to complete login. Please try again.');
         return;
       }
 
-      // Fetch session to get role
       const res = await fetch('/api/auth/session');
       const session = await res.json();
       const role = session?.user?.role;
@@ -43,7 +56,7 @@ export default function LoginPage() {
         router.push('/');
       }
     } catch {
-      setError('An unexpected error occurred. Please try again.');
+      setError('Unable to complete login. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -63,9 +76,11 @@ export default function LoginPage() {
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
               <p>{error}</p>
-              <Link href="/forgot-password" className="mt-2 inline-block font-medium underline hover:text-red-800 dark:hover:text-red-300">
-                Forgot Password?
-              </Link>
+              {showForgotPassword && (
+                <Link href="/forgot-password" className="mt-2 inline-block font-medium underline hover:text-red-800 dark:hover:text-red-300">
+                  Forgot Password?
+                </Link>
+              )}
             </div>
           )}
 

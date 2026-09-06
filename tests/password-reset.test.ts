@@ -490,9 +490,8 @@ describe('Password Reset — Rate Limiting', () => {
 
   it('should block requests exceeding the limit', () => {
     const id = `rl-block-${Date.now()}`;
-    checkRateLimit(id, RATE_LIMITS.passwordReset);
-    checkRateLimit(id, RATE_LIMITS.passwordReset);
-    checkRateLimit(id, RATE_LIMITS.passwordReset);
+    // passwordReset allows 5 per 60 seconds
+    for (let i = 0; i < 5; i++) checkRateLimit(id, RATE_LIMITS.passwordReset);
 
     const result = checkRateLimit(id, RATE_LIMITS.passwordReset);
     expect(result.allowed).toBe(false);

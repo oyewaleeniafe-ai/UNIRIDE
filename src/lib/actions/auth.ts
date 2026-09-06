@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { registerStudentSchema, registerDriverSchema, forgotPasswordIdentifySchema, forgotPasswordVerifySchema, forgotPasswordResetSchema } from '@/lib/validations';
+import { loginSchema, registerStudentSchema, registerDriverSchema, forgotPasswordIdentifySchema, forgotPasswordVerifySchema, forgotPasswordResetSchema } from '@/lib/validations';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
 import { logAuthEvent } from '@/lib/audit';
@@ -151,6 +151,56 @@ export async function registerDriver(data: {
   return { success: true, userId: user.id };
 }
 
+// ─── Login ───────────────────────────────────────────
+
+export async function loginUser(data: { email: string; password: string }) {
+  const parsed = loginSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false,
+      code: 'VALIDATION_ERROR',
+      message: 'Please provide the required login information.',
+      errors: {
+        email: parsed.error.issues.find((i) => i.path.includes('email'))?.message,
+        password: parsed.error.issues.find((i) => i.path.includes('password'))?.message,
+      },
+    };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: data.email.trim() } });
+
+  if (!user || !user.isActive) {
+    return {
+      success: false,
+      code: 'ACCOUNT_NOT_FOUND',
+      message: 'Unable to log in with the provided credentials.',
+    };
+  }
+
+  const isValid = await bcrypt.compare(data.password, user.passwordHash);
+  if (!isValid) {
+    return {
+      success: false,
+      code: 'INVALID_PASSWORD',
+      message: 'Incorrect password.',
+    };
+  }
+
+  return {
+    success: true,
+    code: 'LOGIN_SUCCESS',
+    message: 'Login successful.',
+    data: {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role.toLowerCase(),
+      },
+    },
+  };
+}
+
 // ─── Forgot / Reset Password (Hint-Based) ───────────
 
 /**
@@ -161,20 +211,20 @@ export async function forgotPasswordIdentify(data: { email: string }) {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
   if (!limit.allowed) {
-    return { error: 'Too many attempts. Please try again shortly.' };
+    return { success: false, code: 'RECOVERY_UNAVAILABLE', error: 'Too many attempts. Please try again shortly.' };
   }
 
   const parsed = forgotPasswordIdentifySchema.safeParse(data);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.issues[0].message };
   }
 
   const user = await prisma.user.findUnique({ where: { email: data.email.trim() } });
 
-  // Generic message to prevent user enumeration
   if (!user || !user.passwordHintQuestion) {
     return {
       success: true,
+      code: 'RECOVERY_ACCOUNT_FOUND',
       hintQuestion: 'What is your favorite color?',
       message: 'If an account exists, answer the question below to verify your identity.',
     };
@@ -182,6 +232,7 @@ export async function forgotPasswordIdentify(data: { email: string }) {
 
   return {
     success: true,
+    code: 'RECOVERY_ACCOUNT_FOUND',
     hintQuestion: user.passwordHintQuestion,
     message: 'Answer the question below to verify your identity.',
   };
@@ -194,28 +245,27 @@ export async function forgotPasswordVerify(data: { email: string; hintAnswer: st
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
   if (!limit.allowed) {
-    return { error: 'Too many attempts. Please try again shortly.' };
+    return { success: false, code: 'RECOVERY_UNAVAILABLE', error: 'Too many attempts. Please try again shortly.' };
   }
 
   const parsed = forgotPasswordVerifySchema.safeParse(data);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { success: false, code: 'VALIDATION_ERROR', error: parsed.error.issues[0].message };
   }
 
   const user = await prisma.user.findUnique({ where: { email: data.email.trim() } });
 
   if (!user || !user.passwordHintAnswer) {
-    return { error: 'Incorrect answer. Please try again.' };
+    return { success: false, code: 'INVALID_HINT_ANSWER', error: 'Incorrect answer. Please try again.' };
   }
 
-  // Compare with normalized input (lowercase, trimmed)
   const answerMatches = await bcrypt.compare(
     data.hintAnswer.trim().toLowerCase(),
     user.passwordHintAnswer
   );
 
   if (!answerMatches) {
-    return { error: 'Incorrect answer. Please try again.' };
+    return { success: false, code: 'INVALID_HINT_ANSWER', error: 'Incorrect answer. Please try again.' };
   }
 
   // Invalidate any previous unused tokens
@@ -247,8 +297,10 @@ export async function forgotPasswordVerify(data: { email: string; hintAnswer: st
 
   return {
     success: true,
+    code: 'HINT_VERIFIED',
     resetToken: token,
-    message: 'Identity verified. You may now set a new password.',
+    expiresInSeconds: 60,
+    message: 'Identity verified.',
   };
 }
 
@@ -263,12 +315,17 @@ export async function forgotPasswordReset(data: {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
   if (!limit.allowed) {
-    return { error: 'Too many attempts. Please try again shortly.' };
+    return { success: false, code: 'PASSWORD_RESET_ERROR', error: 'Too many attempts. Please try again shortly.' };
   }
 
   const parsed = forgotPasswordResetSchema.safeParse(data);
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    const isMismatch = parsed.error.issues.some((i) => i.path.includes('confirmPassword'));
+    return {
+      success: false,
+      code: isMismatch ? 'PASSWORD_MISMATCH' : 'PASSWORD_VALIDATION_ERROR',
+      error: parsed.error.issues[0].message,
+    };
   }
 
   const resetToken = await prisma.passwordResetToken.findUnique({
@@ -276,11 +333,11 @@ export async function forgotPasswordReset(data: {
   });
 
   if (!resetToken || resetToken.usedAt) {
-    return { error: 'Invalid or already-used reset token.' };
+    return { success: false, code: 'INVALID_RESET_TOKEN', error: 'This password reset request is invalid. Please start the recovery process again.' };
   }
 
   if (new Date() > resetToken.expiresAt) {
-    return { error: 'Reset token has expired. Please start the recovery process again.' };
+    return { success: false, code: 'RESET_TOKEN_EXPIRED', error: 'This password reset request has expired. Please start the recovery process again.' };
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);
@@ -301,5 +358,5 @@ export async function forgotPasswordReset(data: {
     action: 'auth.password_reset_complete',
   }).catch(() => {});
 
-  return { success: true, message: 'Password reset successfully. You can now sign in.' };
+  return { success: true, code: 'PASSWORD_RESET_SUCCESS', message: 'Your password has been changed successfully.' };
 }
