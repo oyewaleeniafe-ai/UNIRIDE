@@ -224,10 +224,10 @@ export async function forgotPasswordVerify(data: { email: string; hintAnswer: st
     data: { usedAt: new Date() },
   });
 
-  // Generate a short-lived reset token (15 minutes)
+  // Generate a short-lived reset token (1 minute)
   const crypto = await import('crypto');
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 1 * 60 * 1000);
 
   await prisma.passwordResetToken.create({
     data: {
