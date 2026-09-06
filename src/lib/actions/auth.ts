@@ -158,12 +158,6 @@ export async function registerDriver(data: {
  * Does not reveal whether the account exists.
  */
 export async function forgotPasswordIdentify(data: { email: string }) {
-  const rateLimitId = await getRateLimitId();
-  const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
-  if (!limit.allowed) {
-    return { error: 'Too many attempts. Please try again in 15 minutes.' };
-  }
-
   const parsed = forgotPasswordIdentifySchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -191,12 +185,6 @@ export async function forgotPasswordIdentify(data: { email: string }) {
  * Step 2: Verify the hint answer. If correct, return a short-lived reset token.
  */
 export async function forgotPasswordVerify(data: { email: string; hintAnswer: string }) {
-  const rateLimitId = await getRateLimitId();
-  const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
-  if (!limit.allowed) {
-    return { error: 'Too many attempts. Please try again in 15 minutes.' };
-  }
-
   const parsed = forgotPasswordVerifySchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -260,12 +248,6 @@ export async function forgotPasswordReset(data: {
   password: string;
   confirmPassword: string;
 }) {
-  const rateLimitId = await getRateLimitId();
-  const limit = checkRateLimit(rateLimitId, RATE_LIMITS.passwordReset);
-  if (!limit.allowed) {
-    return { error: 'Too many attempts. Please try again in 15 minutes.' };
-  }
-
   const parsed = forgotPasswordResetSchema.safeParse(data);
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
