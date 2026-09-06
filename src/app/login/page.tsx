@@ -62,10 +62,7 @@ export default function LoginPage() {
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
-              <p>{error}</p>
-              <Link href="/forgot-password" className="mt-1 inline-block font-medium underline">
-                Forgot your password?
-              </Link>
+              {error}
             </div>
           )}
 
@@ -107,6 +104,12 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <Link href="/forgot-password" className="text-sm text-[var(--primary)] hover:underline font-medium">
+              Forgot your password?
+            </Link>
+          </div>
 
           <div className="mt-6 text-center text-sm text-[var(--muted)]">
             <p className="mb-2">Don&apos;t have an account?</p>
