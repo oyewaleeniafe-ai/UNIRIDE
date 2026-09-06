@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { registerStudent } from '@/lib/actions/auth';
+import { validateHintAnswer } from '@/lib/validations';
 import PasswordInput from '@/components/password-input';
 
 export default function RegisterStudentPage() {
@@ -20,10 +21,21 @@ export default function RegisterStudentPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hintAnswerError, setHintAnswerError] = useState('');
+  const [hintAnswerTouched, setHintAnswerTouched] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate hint answer before submit
+    const hintErr = validateHintAnswer(form.hintQuestion, form.hintAnswer);
+    if (hintErr) {
+      setHintAnswerError(hintErr);
+      setHintAnswerTouched(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -42,6 +54,14 @@ export default function RegisterStudentPage() {
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (field === 'hintAnswer' && hintAnswerTouched) {
+      setHintAnswerError(validateHintAnswer(form.hintQuestion, value) || '');
+    }
+  };
+
+  const onHintAnswerBlur = () => {
+    setHintAnswerTouched(true);
+    setHintAnswerError(validateHintAnswer(form.hintQuestion, form.hintAnswer) || '');
   };
 
   return (
@@ -140,14 +160,20 @@ export default function RegisterStudentPage() {
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Hint Question</label>
-              <input
-                type="text"
+              <select
                 value={form.hintQuestion}
                 onChange={(e) => updateField('hintQuestion', e.target.value)}
                 required
                 className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                placeholder="e.g. What is your favorite food?"
-              />
+              >
+                <option value="" disabled>Select a security question</option>
+                <option value="What is your favorite food?">What is your favorite food?</option>
+                <option value="What is your mother's maiden name?">What is your mother&apos;s maiden name?</option>
+                <option value="What city were you born in?">What city were you born in?</option>
+                <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+                <option value="What is the name of your best friend?">What is the name of your best friend?</option>
+                <option value="What was the make of your first car?">What was the make of your first car?</option>
+              </select>
             </div>
 
             <div>
@@ -156,10 +182,16 @@ export default function RegisterStudentPage() {
                 type="text"
                 value={form.hintAnswer}
                 onChange={(e) => updateField('hintAnswer', e.target.value)}
+                onBlur={onHintAnswerBlur}
                 required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                className={`w-full px-3 py-2 border rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${
+                  hintAnswerError ? 'border-red-400 dark:border-red-500' : 'border-[var(--border)]'
+                }`}
                 placeholder="e.g. Jollof rice"
               />
+              {hintAnswerError && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">{hintAnswerError}</p>
+              )}
             </div>
 
             <button

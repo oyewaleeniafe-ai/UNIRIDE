@@ -225,7 +225,7 @@ export async function forgotPasswordIdentify(data: { email: string }) {
     return {
       success: true,
       code: 'RECOVERY_ACCOUNT_FOUND',
-      hintQuestion: 'What is your favorite color?',
+      hintQuestion: 'What is your favorite food?',
       message: 'If an account exists, answer the question below to verify your identity.',
     };
   }
@@ -274,10 +274,10 @@ export async function forgotPasswordVerify(data: { email: string; hintAnswer: st
     data: { usedAt: new Date() },
   });
 
-  // Generate a short-lived reset token (1 minute)
+  // Generate a reset token (10 minutes)
   const crypto = await import('crypto');
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 1 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   await prisma.passwordResetToken.create({
     data: {
@@ -299,7 +299,7 @@ export async function forgotPasswordVerify(data: { email: string; hintAnswer: st
     success: true,
     code: 'HINT_VERIFIED',
     resetToken: token,
-    expiresInSeconds: 60,
+    expiresInSeconds: 600,
     message: 'Identity verified.',
   };
 }

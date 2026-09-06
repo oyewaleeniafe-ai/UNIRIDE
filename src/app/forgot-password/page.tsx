@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { forgotPasswordIdentify, forgotPasswordVerify, forgotPasswordReset } from '@/lib/actions/auth';
+import { validateHintAnswer } from '@/lib/validations';
 import PasswordInput from '@/components/password-input';
 
 type Step = 'identify' | 'answer' | 'reset';
@@ -18,6 +19,19 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [expiresIn, setExpiresIn] = useState(0);
+  const [showHints, setShowHints] = useState(false);
+  const [hintAnswerError, setHintAnswerError] = useState('');
+  const [hintAnswerTouched, setHintAnswerTouched] = useState(false);
+
+  const PREDEFINED_QUESTIONS = [
+    'What is your favorite food?',
+    "What is your mother's maiden name?",
+    'What city were you born in?',
+    'What was the name of your first pet?',
+    'What is the name of your best friend?',
+    'What was the make of your first car?',
+  ];
 
   // Step 1: Look up account and get hint question
   const handleIdentify = async (e: React.FormEvent) => {
@@ -44,6 +58,15 @@ export default function ForgotPasswordPage() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate hint answer before submit
+    const hintErr = validateHintAnswer(hintQuestion, hintAnswer);
+    if (hintErr) {
+      setHintAnswerError(hintErr);
+      setHintAnswerTouched(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -53,6 +76,7 @@ export default function ForgotPasswordPage() {
         return;
       }
       setResetToken(result.resetToken || '');
+      setExpiresIn(result.expiresInSeconds || 600);
       setStep('reset');
     } catch {
       setError('An unexpected error occurred. Please try again.');
@@ -117,7 +141,7 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-[var(--muted)] mb-4">
             {step === 'identify' && 'Enter your email to find your account.'}
             {step === 'answer' && `Answer your security question to verify your identity.`}
-            {step === 'reset' && 'Create a new password for your account.'}
+            {step === 'reset' && `Create a new password for your account. You have ${expiresIn} seconds.`}
           </p>
 
           {error && (
@@ -183,12 +207,55 @@ export default function ForgotPasswordPage() {
                       id="hintAnswer"
                       type="text"
                       value={hintAnswer}
-                      onChange={(e) => setHintAnswer(e.target.value)}
+                      onChange={(e) => {
+                        setHintAnswer(e.target.value);
+                        if (hintAnswerTouched) {
+                          setHintAnswerError(validateHintAnswer(hintQuestion, e.target.value) || '');
+                        }
+                      }}
+                      onBlur={() => {
+                        setHintAnswerTouched(true);
+                        setHintAnswerError(validateHintAnswer(hintQuestion, hintAnswer) || '');
+                      }}
                       required
-                      className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
+                        hintAnswerError ? 'border-red-400 dark:border-red-500' : 'border-[var(--border)]'
+                      }`}
                       placeholder="Type your answer"
                     />
+                    {hintAnswerError && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{hintAnswerError}</p>
+                    )}
                   </div>
+
+                  {/* Collapsible hints section */}
+                  <div className="border border-[var(--border)] rounded-md overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowHints(!showHints)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[var(--background)] transition-colors"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+                        Can&apos;t remember your question?
+                      </span>
+                      <svg className={`w-4 h-4 transition-transform ${showHints ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    {showHints && (
+                      <div className="px-3 pb-3 pt-1 border-t border-[var(--border)]">
+                        <p className="text-xs text-[var(--muted)] mb-2">These are the security questions available during registration. Your question should match one of these:</p>
+                        <ul className="space-y-1.5">
+                          {PREDEFINED_QUESTIONS.map((q) => (
+                            <li key={q} className="flex items-start gap-2 text-xs">
+                              <span className="mt-1 w-1.5 h-1.5 rounded-full bg-[var(--primary)] opacity-60 shrink-0" />
+                              <span className="text-[var(--foreground)]">{q}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="submit"
                     disabled={loading}

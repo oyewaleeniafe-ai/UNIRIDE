@@ -45,6 +45,53 @@ export const forgotPasswordIdentifySchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
 
+// ─── Hint Answer Client-Side Validation ────────────
+
+const PREDEFINED_QUESTIONS = [
+  'What is your favorite food?',
+  "What is your mother's maiden name?",
+  'What city were you born in?',
+  'What was the name of your first pet?',
+  'What is the name of your best friend?',
+  'What was the make of your first car?',
+] as const;
+
+/**
+ * Validate a hint answer against the expected format for a given question.
+ * Returns an error message string, or null if valid.
+ */
+export function validateHintAnswer(
+  question: string,
+  answer: string
+): string | null {
+  const trimmed = answer.trim();
+
+  if (trimmed.length < 2) {
+    return 'Answer must be at least 2 characters.';
+  }
+
+  if (trimmed.length > 50) {
+    return 'Answer must be 50 characters or fewer.';
+  }
+
+  // Name/city/pet/car questions: only letters, spaces, hyphens, apostrophes
+  const NAME_PATTERN = /^[a-zA-ZÀ-ÿ'\-\s]+$/;
+
+  if (
+    question === "What is your mother's maiden name?" ||
+    question === 'What city were you born in?' ||
+    question === 'What was the name of your first pet?' ||
+    question === 'What is the name of your best friend?' ||
+    question === 'What was the make of your first car?'
+  ) {
+    if (!NAME_PATTERN.test(trimmed)) {
+      return 'Please use only letters, spaces, hyphens, or apostrophes.';
+    }
+  }
+
+  return null;
+}
+
 export const forgotPasswordVerifySchema = z.object({
   email: z.string().email(),
   hintAnswer: z.string().min(1, 'Please enter your answer'),

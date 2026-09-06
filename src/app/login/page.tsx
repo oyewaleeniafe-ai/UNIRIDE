@@ -12,13 +12,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setShowForgotPassword(false);
     setLoading(true);
 
     try {
@@ -26,9 +24,6 @@ export default function LoginPage() {
 
       if (!result.success) {
         setError(result.message || 'Unable to log in. Please try again.');
-        if (result.code === 'INVALID_PASSWORD') {
-          setShowForgotPassword(true);
-        }
         return;
       }
 
@@ -76,11 +71,6 @@ export default function LoginPage() {
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
               <p>{error}</p>
-              {showForgotPassword && (
-                <Link href="/forgot-password" className="mt-2 inline-block font-medium underline hover:text-red-800 dark:hover:text-red-300">
-                  Forgot Password?
-                </Link>
-              )}
             </div>
           )}
 
@@ -122,6 +112,12 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
+
+          <div className="mt-4 text-center">
+            <Link href="/forgot-password" className="text-sm text-[var(--primary)] hover:underline">
+              Forgot Password?
+            </Link>
+          </div>
 
           <div className="mt-6 text-center text-sm text-[var(--muted)]">
             <p className="mb-2">Don&apos;t have an account?</p>
