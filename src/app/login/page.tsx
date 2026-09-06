@@ -62,7 +62,10 @@ export default function LoginPage() {
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
-              {error}
+              <p>{error}</p>
+              <Link href="/forgot-password" className="mt-1 inline-block font-medium underline">
+                Forgot your password?
+              </Link>
             </div>
           )}
 
@@ -94,12 +97,6 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 autoComplete="current-password"
               />
-            </div>
-
-            <div className="flex items-center justify-end">
-              <Link href="/forgot-password" className="text-sm text-[var(--primary)] hover:underline">
-                Forgot password?
-              </Link>
             </div>
 
             <button
