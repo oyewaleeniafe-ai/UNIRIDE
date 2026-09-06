@@ -127,7 +127,7 @@ export const RATE_LIMITS = {
   },
   passwordReset: {
     key: 'passwordReset',
-    maxRequests: 3,
-    windowSeconds: 900, // 3 per 15 minutes
+    maxRequests: 5,
+    windowSeconds: 60, // 5 per minute
   },
 } as const;
