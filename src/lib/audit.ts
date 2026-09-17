@@ -23,6 +23,12 @@ export type AuditAction =
   | 'driver.inspection_submitted'
   // Rating actions
   | 'rating.submitted'
+  // Payment actions
+  | 'payment.initialized'
+  | 'payment.successful'
+  | 'payment.failed'
+  | 'payment.amount_mismatch'
+  | 'payment.error'
   // Generic
   | 'system.error';
 

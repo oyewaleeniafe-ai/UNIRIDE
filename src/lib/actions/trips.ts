@@ -7,13 +7,13 @@ import { sendRideAcceptedEmail, sendRideStartedEmail, sendRideCompletedEmail, se
 import { logAudit, logTripStatusChange } from '@/lib/audit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
+import { calculateFare } from '@/lib/paystack';
 
 async function getRateLimitId(): Promise<string> {
   const h = await headers();
   return h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || h.get('cf-connecting-ip') || 'unknown';
 }
 
-const FARE_PER_PASSENGER = 800;
 const GRACE_PERIOD_SECONDS = 30; // Students can cancel within 30 seconds of booking
 
 export async function createTrip(data: {
@@ -49,7 +49,8 @@ export async function createTrip(data: {
     return { error: 'Invalid location selected.' };
   }
 
-  const totalFare = data.passengerCount * FARE_PER_PASSENGER;
+  // Server-side fare calculation
+  const fare = calculateFare(data.passengerCount);
   const userId = await getUserId();
 
   const student = await prisma.student.findUnique({ where: { userId } });
@@ -64,7 +65,9 @@ export async function createTrip(data: {
       dropoffLocationId: data.dropoffLocationId,
       passengerCount: data.passengerCount,
       rideType: data.rideType,
-      totalFare,
+      totalFare: fare.totalAmount,
+      appCharge: fare.appCharge,
+      driverEarnings: fare.rideFare,
       status: 'PENDING',
       passengers: {
         create: {
@@ -95,7 +98,7 @@ export async function createTrip(data: {
     from: 'NONE',
     to: 'PENDING',
     studentId: userId,
-    fare: totalFare,
+    fare: fare.totalAmount,
     pickup: pickup.name,
     dropoff: dropoff.name,
   }).catch(() => {});
@@ -116,7 +119,15 @@ export async function createTrip(data: {
     });
   }
 
-  return { success: true, trip };
+  return {
+    success: true,
+    trip,
+    fare: {
+      rideFare: fare.rideFare,
+      appCharge: fare.appCharge,
+      totalAmount: fare.totalAmount,
+    },
+  };
 }
 
 export async function acceptTrip(tripId: string) {
@@ -130,6 +141,12 @@ export async function acceptTrip(tripId: string) {
 
   if (!driver) {
     return { error: 'Driver account not found.' };
+  }
+
+  // Role check: only drivers can accept trips
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((session.user as any).role !== 'DRIVER') {
+    return { error: 'Only drivers can accept rides.' };
   }
 
   if (!driver.isOnline) {
@@ -210,6 +227,14 @@ export async function rejectTrip(tripId: string) {
 
 export async function startTrip(tripId: string) {
   const userId = await getUserId();
+  const session = await auth();
+
+  // Role check: only drivers can start trips
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((session?.user as any)?.role !== 'DRIVER') {
+    return { error: 'Only drivers can start rides.' };
+  }
+
   const driver = await prisma.driver.findUnique({ where: { userId } });
   if (!driver) return { error: 'Driver account not found.' };
 
@@ -273,6 +298,14 @@ export async function startTrip(tripId: string) {
 
 export async function completeTrip(tripId: string) {
   const userId = await getUserId();
+  const session = await auth();
+
+  // Role check: only drivers can complete trips
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((session?.user as any)?.role !== 'DRIVER') {
+    return { error: 'Only drivers can complete rides.' };
+  }
+
   const driver = await prisma.driver.findUnique({ where: { userId } });
   if (!driver) return { error: 'Driver account not found.' };
 
@@ -280,6 +313,14 @@ export async function completeTrip(tripId: string) {
   if (!trip) return { error: 'Trip not found.' };
   if (trip.driverId !== driver.id) return { error: 'You are not assigned to this trip.' };
   if (trip.status !== 'IN_PROGRESS') return { error: 'Invalid status transition.' };
+
+  // Verify payment was successful before completing
+  const payment = await prisma.payment.findFirst({
+    where: { tripId, status: 'SUCCESSFUL' },
+  });
+  if (!payment) {
+    return { error: 'Payment has not been confirmed for this ride.' };
+  }
 
   const driverUser = await prisma.user.findUnique({ where: { id: userId } });
 
@@ -355,6 +396,7 @@ export async function getActiveTripStatus() {
       pickupLocation: true,
       dropoffLocation: true,
       driver: { include: { user: true, vehicle: true } },
+      payments: true,
     },
     orderBy: { createdAt: 'desc' },
   });
@@ -372,7 +414,12 @@ export async function cancelTrip(tripId: string) {
   const tripStudent = await prisma.student.findUnique({ where: { id: trip.studentId } });
   const isStudent = tripStudent?.userId === userId;
 
-  if (!isStudent && trip.driverId === null) {
+  // Check if this user is the driver for this trip
+  const session = await auth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isDriver = (session?.user as any)?.role === 'DRIVER' && trip.driverId !== null;
+
+  if (!isStudent && !isDriver) {
     return { error: 'You are not part of this trip.' };
   }
 
@@ -410,6 +457,12 @@ export async function cancelTrip(tripId: string) {
     dropoff: dropoff?.name,
   }).catch(() => {});
 
+  // Mark any pending/failed payment as abandoned
+  await prisma.payment.updateMany({
+    where: { tripId, status: 'PENDING' },
+    data: { status: 'ABANDONED' },
+  });
+
   // Notify and email the other party
   if (isStudent && trip.driverId) {
     const driver = await prisma.driver.findUnique({ where: { id: trip.driverId } });
@@ -434,8 +487,8 @@ export async function cancelTrip(tripId: string) {
         }).catch(() => {});
       }
     }
-  } else if (!isStudent && trip.driverId) {
-    // Look up student's User record for notification and email
+  } else if (isDriver && trip.driverId) {
+    // Driver is cancelling - notify student
     const cancelStudentRec = await prisma.student.findUnique({ where: { id: trip.studentId } });
     const cancelStudentUserId = cancelStudentRec?.userId ?? trip.studentId;
     await prisma.notification.create({

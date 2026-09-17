@@ -130,4 +130,9 @@ export const RATE_LIMITS = {
     maxRequests: 5,
     windowSeconds: 60, // 5 per minute
   },
+  payment: {
+    key: 'payment',
+    maxRequests: 10,
+    windowSeconds: 300, // 10 per 5 minutes
+  },
 } as const;

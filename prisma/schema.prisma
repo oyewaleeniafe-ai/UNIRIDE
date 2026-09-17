@@ -38,6 +38,13 @@ enum SafetyAlertStatus {
   RESOLVED
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  ABANDONED
+}
+
 // ─── Models ───────────────────────────────────────────
 
 model User {
@@ -61,6 +68,7 @@ model User {
   passwordHintQuestion  String?  @map("password_hint_question")
   passwordHintAnswer    String?  @map("password_hint_answer")
   passwordResetTokens PasswordResetToken[]
+  payments           Payment[]
 
   @@map("users")
 }
@@ -128,6 +136,8 @@ model Trip {
   rideType          RideType    @map("ride_type")
   passengerCount    Int         @map("passenger_count")
   totalFare         Float       @map("total_fare")
+  appCharge         Float       @default(30) @map("app_charge")
+  driverEarnings    Float       @default(0) @map("driver_earnings")
   status            RideStatus  @default(PENDING)
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
@@ -140,10 +150,14 @@ model Trip {
   statusHistory   RideStatusHistory[]
   ratings         Rating[]
   safetyAlerts    SafetyAlert[]
+  payments        Payment[]
 
   @@index([status])
   @@index([driverId])
   @@index([studentId])
+  @@index([status, driverId])
+  @@index([status, studentId])
+  @@index([createdAt])
   @@map("trips")
 }
 
@@ -296,4 +310,34 @@ model PasswordResetToken {
   @@index([token])
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+// ─── Payment ──────────────────────────────────────────
+
+model Payment {
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  tripId            String        @map("trip_id") @db.Uuid
+  reference         String        @unique @db.VarChar(100)
+  passengerCount    Int           @map("passenger_count")
+  rideFare          Float         @map("ride_fare")
+  appCharge         Float         @map("app_charge")
+  totalAmount       Float         @map("total_amount")
+  currency          String        @default("NGN")
+  status            PaymentStatus @default(PENDING)
+  paystackReference String?       @map("paystack_reference")
+  paidAt            DateTime?     @map("paid_at")
+  failureReason     String?       @map("failure_reason")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  user  User @relation(fields: [userId], references: [id])
+  trip  Trip @relation(fields: [tripId], references: [id])
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([reference])
+  @@index([status])
+  @@index([paystackReference])
+  @@map("payments")
 }

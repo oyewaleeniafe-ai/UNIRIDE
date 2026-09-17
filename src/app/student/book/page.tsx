@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createTrip } from '@/lib/actions/trips';
+import { initializePayment, verifyPayment } from '@/lib/actions/payments';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import Spinner from '@/components/spinner';
 
@@ -16,7 +17,8 @@ const RIDE_TYPES = [
   { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle / Carpool', desc: 'Share with other students', icon: '🚐' },
 ] as const;
 
-const FARE_PER_PASSENGER = 800;
+const FARE_PER_PASSENGER = 200;
+const APP_CHARGE = 30;
 
 export default function BookRidePage() {
   const router = useRouter();
@@ -65,7 +67,10 @@ export default function BookRidePage() {
 
   const selectedPickup = locations.find((l) => l.id === pickupId);
   const selectedDropoff = locations.find((l) => l.id === dropoffId);
-  const totalFare = passengerCount * FARE_PER_PASSENGER;
+
+  // Client-side fare calculation for UI display
+  const rideFare = passengerCount * FARE_PER_PASSENGER;
+  const totalAmount = rideFare + APP_CHARGE;
 
   const handleSubmit = async () => {
     setError('');
@@ -85,19 +90,42 @@ export default function BookRidePage() {
 
     setLoading(true);
     try {
-      const result = await createTrip({
+      // Step 1: Create the trip
+      const tripResult = await createTrip({
         pickupLocationId: pickupId,
         dropoffLocationId: dropoffId,
         passengerCount,
         rideType: rideType as 'SOLO_QUICK_CAB' | 'SHARED_SHUTTLE',
       });
-      if (result.error) {
-        setError(result.error);
+
+      if (tripResult.error) {
+        setError(tripResult.error);
         setLoading(false);
         return;
       }
-      setSuccess(true);
-      setTimeout(() => router.push('/student/rides'), 1500);
+
+      // Step 2: Initialize payment with Paystack
+      if (tripResult.trip) {
+        const paymentResult = await initializePayment(tripResult.trip.id, passengerCount);
+
+        if (paymentResult.error) {
+          setError(paymentResult.error);
+          setLoading(false);
+          return;
+        }
+
+        // Step 3: Redirect to Paystack checkout
+        if ('authorizationUrl' in paymentResult && paymentResult.authorizationUrl) {
+          const authUrl = paymentResult.authorizationUrl;
+          // Redirect to Paystack
+          window.location.href = authUrl;
+          return;
+        }
+
+        // If no auth URL (payment already verified), just redirect to rides
+        setSuccess(true);
+        setTimeout(() => router.push('/student/rides'), 1500);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
@@ -346,10 +374,20 @@ export default function BookRidePage() {
               </button>
             </div>
 
-            <div className="mt-4 text-center">
-              <p className="text-sm text-[var(--muted)]">Fare per student: ₦{FARE_PER_PASSENGER.toLocaleString()}</p>
-              <p className="text-lg font-bold text-[var(--foreground)] mt-1">Total: ₦{totalFare.toLocaleString()}</p>
-              <p className="text-xs text-[var(--muted)]">Each student pays ₦{FARE_PER_PASSENGER.toLocaleString()}</p>
+            {/* Fare breakdown */}
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Ride fare ({passengerCount} × ₦{FARE_PER_PASSENGER})</span>
+                <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">App charge</span>
+                <span className="font-medium text-[var(--foreground)]">₦{APP_CHARGE}</span>
+              </div>
+              <div className="pt-2 border-t border-[var(--border)] flex justify-between">
+                <span className="text-sm font-medium text-[var(--foreground)]">Total</span>
+                <span className="text-lg font-bold text-[var(--foreground)]">₦{totalAmount.toLocaleString()}</span>
+              </div>
             </div>
           </div>
 
@@ -397,11 +435,11 @@ export default function BookRidePage() {
         </div>
       )}
 
-      {/* Step: Review */}
+      {/* Step: Review & Pay */}
       {step === 'review' && (
         <div>
           <button onClick={() => setStep('ridetype')} className="text-sm text-[var(--primary)] hover:underline mb-3">&larr; Back</button>
-          <h2 className="text-sm font-medium text-[var(--foreground)] mb-3">Review Your Booking</h2>
+          <h2 className="text-sm font-medium text-[var(--foreground)] mb-3">Review & Pay</h2>
 
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 space-y-3">
             <div className="flex justify-between text-sm">
@@ -423,9 +461,21 @@ export default function BookRidePage() {
                 {RIDE_TYPES.find((r) => r.value === rideType)?.label}
               </span>
             </div>
-            <div className="pt-3 border-t border-[var(--border)] flex justify-between">
-              <span className="text-sm font-medium text-[var(--foreground)]">Total fare</span>
-              <span className="text-lg font-bold text-[var(--foreground)]">₦{totalFare.toLocaleString()}</span>
+
+            {/* Payment breakdown */}
+            <div className="pt-3 border-t border-[var(--border)] space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Ride fare ({passengerCount} × ₦{FARE_PER_PASSENGER})</span>
+                <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">App charge</span>
+                <span className="font-medium text-[var(--foreground)]">₦{APP_CHARGE}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[var(--border)]">
+                <span className="text-sm font-medium text-[var(--foreground)]">Total</span>
+                <span className="text-lg font-bold text-[var(--foreground)]">₦{totalAmount.toLocaleString()}</span>
+              </div>
             </div>
           </div>
 
@@ -437,12 +487,12 @@ export default function BookRidePage() {
             {loading ? (
               <>
                 <Spinner size="sm" className="text-[var(--primary-text)]" />
-                <span>Confirming booking…</span>
+                <span>Processing payment…</span>
               </>
             ) : !isOnline ? (
-              <span>Offline — Cannot Book</span>
+              <span>Offline — Cannot Pay</span>
             ) : (
-              <span>Confirm Booking</span>
+              <span>Pay ₦{totalAmount.toLocaleString()} with Paystack</span>
             )}
           </button>
 

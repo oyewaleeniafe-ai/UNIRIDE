@@ -154,6 +154,16 @@ export async function registerDriver(data: {
 // ─── Login ───────────────────────────────────────────
 
 export async function loginUser(data: { email: string; password: string }) {
+  const rateLimitId = await getRateLimitId();
+  const limit = checkRateLimit(rateLimitId, RATE_LIMITS.login);
+  if (!limit.allowed) {
+    return {
+      success: false,
+      code: 'RATE_LIMITED',
+      message: 'Too many login attempts. Please try again later.',
+    };
+  }
+
   const parsed = loginSchema.safeParse(data);
   if (!parsed.success) {
     return {
