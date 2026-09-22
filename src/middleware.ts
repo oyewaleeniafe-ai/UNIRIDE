@@ -16,10 +16,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Get session token
+  // Get session token.
+  // secureCookie must mirror how Auth.js picked the cookie name server-side:
+  // over HTTPS it issues `__Secure-authjs.session-token`, and the cookie name
+  // is also the JWT decryption salt — without this, getToken always returns
+  // null in production and logged-in users get bounced back to /login.
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0].trim();
+  const isSecure =
+    forwardedProto === 'https' || request.nextUrl.protocol === 'https:';
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
+    secureCookie: isSecure,
   });
 
   // Public routes that don't require authentication
