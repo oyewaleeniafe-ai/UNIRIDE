@@ -68,7 +68,7 @@ export default function RegisterStudentPage() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-[var(--foreground)]">Campus Cab & Shuttle</h1>
+          <h1 className="text-xl font-bold text-[var(--foreground)]">Campus Cab</h1>
           <p className="text-sm text-[var(--muted)] mt-1">Student Registration</p>
         </div>
 

@@ -1,6 +1,6 @@
 {
-  "name": "Campus Cab & Shuttle RideBook",
-  "short_name": "RideBook",
+  "name": "Campus Cab",
+  "short_name": "Campus Cab",
   "description": "University transportation platform - book campus cabs, shuttles, and carpools",
   "start_url": "/",
   "display": "standalone",

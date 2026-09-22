@@ -21,15 +21,15 @@ function baseTemplate(title: string, content: string): string {
   <div style="max-width:560px;margin:0 auto;padding:24px;">
     <div style="background:#1a56db;color:white;padding:16px 20px;border-radius:8px 8px 0 0;">
       <h1 style="margin:0;font-size:18px;font-weight:600;">Campus Cab</h1>
-      <p style="margin:4px 0 0;font-size:12px;opacity:0.8;">RideBook</p>
+      <p style="margin:4px 0 0;font-size:12px;opacity:0.8;">Campus Cab</p>
     </div>
     <div style="background:white;padding:24px;border:1px solid #dee2e6;border-top:none;border-radius:0 0 8px 8px;">
       <h2 style="margin:0 0 16px;font-size:16px;color:#1a1a1a;">${title}</h2>
       ${content}
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid #dee2e6;">
         <p style="margin:0;font-size:12px;color:#6c757d;">
-          Campus Cab & Shuttle RideBook — University Transportation<br>
-          <a href="${APP_URL}" style="color:#1a56db;text-decoration:none;">Open RideBook</a>
+          Campus Cab — University Transportation<br>
+          <a href="${APP_URL}" style="color:#1a56db;text-decoration:none;">Open Campus Cab</a>
         </p>
       </div>
     </div>

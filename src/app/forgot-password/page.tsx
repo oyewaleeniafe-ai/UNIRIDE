@@ -112,8 +112,8 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Campus Cab & Shuttle</h1>
-          <p className="text-sm text-[var(--muted)] mt-1">RideBook — University Transportation</p>
+          <h1 className="text-2xl font-bold text-[var(--foreground)]">Campus Cab</h1>
+          <p className="text-sm text-[var(--muted)] mt-1">University Transportation</p>
         </div>
 
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">

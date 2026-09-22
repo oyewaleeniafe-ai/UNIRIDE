@@ -1,4 +1,4 @@
-# Campus Cab & Shuttle RideBook
+# Campus Cab
 
 A production-ready university transportation platform connecting students with campus cab drivers, shuttle operators, and carpool drivers.
 
