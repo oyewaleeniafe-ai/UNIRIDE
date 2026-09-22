@@ -106,7 +106,7 @@ export default function BookRidePage() {
 
       // Step 2: Initialize payment with Paystack
       if (tripResult.trip) {
-        const paymentResult = await initializePayment(tripResult.trip.id, passengerCount);
+        const paymentResult = await initializePayment(tripResult.trip.id);
 
         if (paymentResult.error) {
           setError(paymentResult.error);

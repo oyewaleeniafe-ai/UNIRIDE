@@ -26,7 +26,7 @@ async function getRateLimitId(): Promise<string> {
  * Initialize a payment for a trip.
  * Server calculates the fare — never trusts frontend amounts.
  */
-export async function initializePayment(tripId: string, passengerCount: number) {
+export async function initializePayment(tripId: string) {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.payment);
   if (!limit.allowed) {
@@ -56,6 +56,14 @@ export async function initializePayment(tripId: string, passengerCount: number) 
   }
   if (trip.status !== 'PENDING') {
     return { error: 'This trip is no longer accepting payments.' };
+  }
+
+  // SECURITY: derive passenger count from the trip record — never from the
+  // client. Otherwise a caller could initialize a ₦230 payment for a
+  // 3-passenger trip by passing passengerCount=1.
+  const passengerCount = trip.passengerCount;
+  if (passengerCount < 1 || passengerCount > 10) {
+    return { error: 'Invalid passenger count on this trip.' };
   }
 
   // Check for existing successful payment (idempotent)
@@ -96,7 +104,9 @@ export async function initializePayment(tripId: string, passengerCount: number) 
       }
     }
 
-    // Update the pending payment with new fare calculation
+    // Refresh the fare from the trip's (server-side) passenger count.
+    // The reference must stay STABLE — regenerating it would desync the
+    // Paystack transaction from our record and break callback verification.
     const fare = calculateFare(passengerCount);
     await prisma.payment.update({
       where: { id: pendingPayment.id },
@@ -105,7 +115,6 @@ export async function initializePayment(tripId: string, passengerCount: number) 
         rideFare: fare.rideFare,
         appCharge: fare.appCharge,
         totalAmount: fare.totalAmount,
-        reference: generatePaymentReference(),
       },
     });
 

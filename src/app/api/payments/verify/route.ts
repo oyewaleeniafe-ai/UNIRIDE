@@ -41,6 +41,13 @@ export async function GET(request: NextRequest) {
     const verification = await verifyTransaction(reference);
 
     if (verification.data.status === 'success') {
+      // Currency check (tamper protection)
+      if (verification.data.currency !== 'NGN') {
+        return NextResponse.redirect(
+          new URL('/student/rides?payment=error&reason=currency_mismatch', request.url)
+        );
+      }
+
       // Verify the amount matches (tamper protection)
       const expectedAmountInKobo = Math.round(payment.totalAmount * 100);
       if (verification.data.amount !== expectedAmountInKobo) {
