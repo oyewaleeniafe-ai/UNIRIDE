@@ -13,12 +13,17 @@ interface Location {
 }
 
 const RIDE_TYPES = [
-  { value: 'SOLO_QUICK_CAB', label: 'Solo Quick Cab', desc: 'Direct ride, fastest option', icon: '🚕' },
-  { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle / Carpool', desc: 'Share with other students', icon: '🚐' },
+  { value: 'SOLO_QUICK_CAB', label: 'Solo Cab', desc: 'Direct ride, fastest option · ₦800 fixed', icon: '🚕' },
+  { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle', desc: 'Share with other students · ₦200 fixed', icon: '🚐' },
 ] as const;
 
-const FARE_PER_PASSENGER = 200;
-const APP_CHARGE = 30;
+// Display-only mirror of the server-side fixed fares (src/lib/paystack.ts is
+// the source of truth — the server recomputes the real amount on booking).
+const RIDE_FARES: Record<string, number> = {
+  SOLO_QUICK_CAB: 800,
+  SHARED_SHUTTLE: 200,
+};
+const SERVICE_FEE = 30;
 
 export default function BookRidePage() {
   const router = useRouter();
@@ -68,9 +73,10 @@ export default function BookRidePage() {
   const selectedPickup = locations.find((l) => l.id === pickupId);
   const selectedDropoff = locations.find((l) => l.id === dropoffId);
 
-  // Client-side fare calculation for UI display
-  const rideFare = passengerCount * FARE_PER_PASSENGER;
-  const totalAmount = rideFare + APP_CHARGE;
+  // Client-side fare display for the selected ride type (fixed prices).
+  // The server recalculates and validates the real amount on booking.
+  const rideFare = RIDE_FARES[rideType] ?? 0;
+  const totalAmount = rideFare + SERVICE_FEE;
 
   const handleSubmit = async () => {
     setError('');
@@ -213,11 +219,11 @@ export default function BookRidePage() {
 
       {/* Progress */}
       <div className="flex items-center gap-1 mb-6">
-        {(['pickup', 'dropoff', 'passengers', 'ridetype', 'review'] as const).map((s, i) => (
+        {(['pickup', 'dropoff', 'ridetype', 'passengers', 'review'] as const).map((s, i) => (
           <div
             key={s}
             className={`h-1 flex-1 rounded transition-colors ${
-              (['pickup', 'dropoff', 'passengers', 'ridetype', 'review'] as const).indexOf(step) >= i
+              (['pickup', 'dropoff', 'ridetype', 'passengers', 'review'] as const).indexOf(step) >= i
                 ? 'bg-[var(--primary)]'
                 : 'bg-[var(--border)]'
             }`}
@@ -342,7 +348,7 @@ export default function BookRidePage() {
             )}
           </div>
           <button
-            onClick={() => { if (dropoffId) setStep('passengers'); }}
+            onClick={() => { if (dropoffId) setStep('ridetype'); }}
             disabled={!dropoffId}
             className="mt-4 w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
           >
@@ -351,10 +357,11 @@ export default function BookRidePage() {
         </div>
       )}
 
-      {/* Step: Passengers */}
+      {/* Step: Passengers (fare is fixed per ride type — passenger count
+          no longer affects the price) */}
       {step === 'passengers' && (
         <div>
-          <button onClick={() => setStep('dropoff')} className="text-sm text-[var(--primary)] hover:underline mb-3">&larr; Back</button>
+          <button onClick={() => setStep('ridetype')} className="text-sm text-[var(--primary)] hover:underline mb-3">&larr; Back</button>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Number of Passengers</label>
 
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
@@ -374,25 +381,11 @@ export default function BookRidePage() {
               </button>
             </div>
 
-            {/* Fare breakdown */}
-            <div className="mt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Ride fare ({passengerCount} × ₦{FARE_PER_PASSENGER})</span>
-                <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">App charge</span>
-                <span className="font-medium text-[var(--foreground)]">₦{APP_CHARGE}</span>
-              </div>
-              <div className="pt-2 border-t border-[var(--border)] flex justify-between">
-                <span className="text-sm font-medium text-[var(--foreground)]">Total</span>
-                <span className="text-lg font-bold text-[var(--foreground)]">₦{totalAmount.toLocaleString()}</span>
-              </div>
-            </div>
+            {/* Fare breakdown is shown on the ride type step and in review */}
           </div>
 
           <button
-            onClick={() => setStep('ridetype')}
+            onClick={() => setStep('review')}
             className="mt-4 w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] transition-colors"
           >
             Continue
@@ -400,10 +393,10 @@ export default function BookRidePage() {
         </div>
       )}
 
-      {/* Step: Ride Type */}
+      {/* Step: Ride Type (chosen before the amount/fare) */}
       {step === 'ridetype' && (
         <div>
-          <button onClick={() => setStep('passengers')} className="text-sm text-[var(--primary)] hover:underline mb-3">&larr; Back</button>
+          <button onClick={() => setStep('dropoff')} className="text-sm text-[var(--primary)] hover:underline mb-3">&larr; Back</button>
           <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Ride Type</label>
 
           <div className="space-y-2">
@@ -426,8 +419,24 @@ export default function BookRidePage() {
             ))}
           </div>
 
+          {/* Amount/Fare — reflects the selected ride type (fixed prices) */}
+          <div className="mt-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-[var(--muted)]">Ride fare</span>
+              <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-[var(--muted)]">Service Fee</span>
+              <span className="font-medium text-[var(--foreground)]">₦{SERVICE_FEE}</span>
+            </div>
+            <div className="pt-2 border-t border-[var(--border)] flex justify-between">
+              <span className="text-sm font-medium text-[var(--foreground)]">Total</span>
+              <span className="text-lg font-bold text-[var(--foreground)]">₦{totalAmount.toLocaleString()}</span>
+            </div>
+          </div>
+
           <button
-            onClick={() => setStep('review')}
+            onClick={() => setStep('passengers')}
             className="mt-4 w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] transition-colors"
           >
             Continue
@@ -465,12 +474,12 @@ export default function BookRidePage() {
             {/* Payment breakdown */}
             <div className="pt-3 border-t border-[var(--border)] space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Ride fare ({passengerCount} × ₦{FARE_PER_PASSENGER})</span>
+                <span className="text-[var(--muted)]">Ride fare</span>
                 <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">App charge</span>
-                <span className="font-medium text-[var(--foreground)]">₦{APP_CHARGE}</span>
+                <span className="text-[var(--muted)]">Service Fee</span>
+                <span className="font-medium text-[var(--foreground)]">₦{SERVICE_FEE}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-[var(--border)]">
                 <span className="text-sm font-medium text-[var(--foreground)]">Total</span>

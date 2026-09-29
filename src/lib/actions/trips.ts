@@ -49,8 +49,9 @@ export async function createTrip(data: {
     return { error: 'Invalid location selected.' };
   }
 
-  // Server-side fare calculation
-  const fare = calculateFare(data.passengerCount);
+  // Server-side fare calculation (fixed price by ride type — not distance,
+  // not passenger count)
+  const fare = calculateFare(data.rideType);
   const userId = await getUserId();
 
   const student = await prisma.student.findUnique({ where: { userId } });

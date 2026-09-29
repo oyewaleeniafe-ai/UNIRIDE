@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: the ThemeProvider toggles .light/.dark on <html>.
+   Without this, Tailwind v4's dark: utilities follow the OS preference
+   instead of the in-app toggle, so e.g. the driver inspection banner could
+   render dark-styled while the rest of the UI is light. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -111,4 +117,37 @@ a[href*="netlify.com"] img {
 }
 .animate-bounce-in {
   animation: bounce-in 0.4s ease-out forwards;
+}
+
+/* ---- CampusCab background image treatment (slideshow + dashboards) ---- */
+/* Neutral dark scrim over the login background images: keeps images visible
+   while preserving contrast for the login title, card, inputs and buttons.
+   Light mode uses a theme-tinted neutral wash so dark heading text stays
+   readable; dark mode uses the dark scrim so light heading text stays
+   readable. Images are never blurred. */
+.cc-login-scrim {
+  background: rgba(248, 249, 250, 0.55);
+}
+.dark .cc-login-scrim {
+  background: rgba(17, 19, 24, 0.72);
+}
+
+/* Stronger, theme-matched wash behind dashboard content so cards, tables and
+   navigation stay fully readable in both light and dark mode. */
+.cc-dashboard-scrim {
+  background: rgba(248, 249, 250, 0.75);
+}
+.dark .cc-dashboard-scrim {
+  background: rgba(17, 19, 24, 0.87);
+}
+
+/* Slight lift for text that sits directly on a background image */
+.cc-text-lift {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* Login page: hide placeholder text (typed text, caret, borders, labels and
+   focus states are untouched). Scoped to the login form only. */
+.login-placeholder-hidden input::placeholder {
+  color: transparent;
 }

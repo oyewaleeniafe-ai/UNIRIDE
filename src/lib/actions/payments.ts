@@ -58,13 +58,13 @@ export async function initializePayment(tripId: string) {
     return { error: 'This trip is no longer accepting payments.' };
   }
 
-  // SECURITY: derive passenger count from the trip record — never from the
-  // client. Otherwise a caller could initialize a ₦230 payment for a
-  // 3-passenger trip by passing passengerCount=1.
-  const passengerCount = trip.passengerCount;
-  if (passengerCount < 1 || passengerCount > 10) {
-    return { error: 'Invalid passenger count on this trip.' };
+  // SECURITY: derive the fare from the trip's stored ride type — never from
+  // the client. The trip record is the server-side source of truth.
+  const rideType = trip.rideType;
+  if (rideType !== 'SOLO_QUICK_CAB' && rideType !== 'SHARED_SHUTTLE') {
+    return { error: 'Invalid ride type on this trip.' };
   }
+  const passengerCount = trip.passengerCount;
 
   // Check for existing successful payment (idempotent)
   const existingPayment = await prisma.payment.findFirst({
@@ -104,14 +104,13 @@ export async function initializePayment(tripId: string) {
       }
     }
 
-    // Refresh the fare from the trip's (server-side) passenger count.
+    // Refresh the fare from the trip's (server-side) ride type.
     // The reference must stay STABLE — regenerating it would desync the
     // Paystack transaction from our record and break callback verification.
-    const fare = calculateFare(passengerCount);
+    const fare = calculateFare(rideType);
     await prisma.payment.update({
       where: { id: pendingPayment.id },
       data: {
-        passengerCount,
         rideFare: fare.rideFare,
         appCharge: fare.appCharge,
         totalAmount: fare.totalAmount,
@@ -121,8 +120,8 @@ export async function initializePayment(tripId: string) {
     return createPaystackTransaction(pendingPayment.id, pendingPayment.reference, passengerCount, session.user.email || '');
   }
 
-  // Server-side fare calculation
-  const fare = calculateFare(passengerCount);
+  // Server-side fare calculation (fixed price by ride type)
+  const fare = calculateFare(rideType);
 
   // Create payment record
   const reference = generatePaymentReference();
@@ -165,8 +164,11 @@ async function createPaystackTransaction(
   email: string
 ) {
   try {
-    const fare = calculateFare(passengerCount);
-    const amountInKobo = Math.round(fare.totalAmount * 100); // Convert naira to kobo
+    // Re-read the stored payment record — its amounts are the server-validated
+    // truth that was persisted at initialization time.
+    const stored = await prisma.payment.findUnique({ where: { id: paymentId } });
+    if (!stored) throw new Error('Payment record not found');
+    const amountInKobo = Math.round(stored.totalAmount * 100); // Convert naira to kobo
 
     const result = await initializeTransaction(email, amountInKobo, reference, {
       payment_id: paymentId,
@@ -184,11 +186,11 @@ async function createPaystackTransaction(
       authorizationUrl: result.data.authorization_url,
       reference,
       accessCode: result.data.access_code,
-      amount: fare.totalAmount,
+      amount: stored.totalAmount,
       breakdown: {
-        rideFare: fare.rideFare,
-        appCharge: fare.appCharge,
-        totalAmount: fare.totalAmount,
+        rideFare: stored.rideFare,
+        appCharge: stored.appCharge,
+        totalAmount: stored.totalAmount,
       },
     };
   } catch (err) {

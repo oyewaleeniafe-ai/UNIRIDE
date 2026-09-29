@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { loginUser } from '@/lib/actions/auth';
 import PasswordInput from '@/components/password-input';
+import BackgroundSlideshow from '@/components/background-slideshow';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,9 +59,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+    <div className="relative min-h-screen flex items-center justify-center bg-[var(--background)] px-4 overflow-hidden">
+      {/* Decorative full-screen background slideshow (visual only) */}
+      <BackgroundSlideshow
+        className="absolute inset-0 z-0"
+        overlayClassName="cc-login-scrim"
+      />
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="text-center mb-8 cc-text-lift">
           <h1 className="text-2xl font-bold text-[var(--foreground)]">Campus Cab</h1>
           <p className="text-sm text-[var(--muted)] mt-1">University Transportation</p>
         </div>
@@ -74,7 +81,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 login-placeholder-hidden">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-1">
                 Email

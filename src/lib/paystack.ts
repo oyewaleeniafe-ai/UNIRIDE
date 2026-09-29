@@ -10,19 +10,21 @@ const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
 // ─── Fare Constants (server-side source of truth) ─────
 
-export const FARE_PER_PASSENGER = 200; // ₦200 per passenger
-export const APP_CHARGE = 30; // ₦30 per booking (once)
+// Fixed per-booking ride prices — independent of distance and passenger count.
+export const SOLO_CAB_FARE = 800; // ₦800 fixed Solo Cab ride fare
+export const SHARED_SHUTTLE_FARE = 200; // ₦200 fixed Shared Shuttle ride fare
+export const APP_CHARGE = 30; // ₦30 service fee per booking (once)
 
 /**
- * Calculate the total fare server-side.
+ * Calculate the total fare server-side from the selected ride type.
  * NEVER trust frontend-supplied amounts.
  */
-export function calculateFare(passengerCount: number): {
+export function calculateFare(rideType: 'SOLO_QUICK_CAB' | 'SHARED_SHUTTLE'): {
   rideFare: number;
   appCharge: number;
   totalAmount: number;
 } {
-  const rideFare = FARE_PER_PASSENGER * passengerCount;
+  const rideFare = rideType === 'SOLO_QUICK_CAB' ? SOLO_CAB_FARE : SHARED_SHUTTLE_FARE;
   const appCharge = APP_CHARGE;
   const totalAmount = rideFare + appCharge;
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import AuditLogViewer from './audit-log';
 import SOSButton from '@/components/sos-button';
 import ActiveRideTracker from '@/components/active-ride-tracker';
+import BackgroundSlideshow from '@/components/background-slideshow';
 
 export default async function StudentDashboard() {
   const session = await auth();
@@ -20,7 +21,7 @@ export default async function StudentDashboard() {
 
   const activeTrip = await prisma.trip.findFirst({
     where: {
-      studentId: studentId || '__none__',
+      studentId: studentId || '00000000-0000-4000-8000-0000000000ff',
       status: { in: ['PENDING', 'ACCEPTED', 'IN_PROGRESS'] },
     },
     include: {
@@ -32,7 +33,7 @@ export default async function StudentDashboard() {
   });
 
   const recentTrips = await prisma.trip.findMany({
-    where: { studentId: studentId || '__none__', status: 'COMPLETED' },
+    where: { studentId: studentId || '00000000-0000-4000-8000-0000000000ff', status: 'COMPLETED' },
     include: {
       pickupLocation: true,
       dropoffLocation: true,
@@ -49,11 +50,17 @@ export default async function StudentDashboard() {
   });
 
   const totalTrips = await prisma.trip.count({
-    where: { studentId: studentId || '__none__', status: 'COMPLETED' },
+    where: { studentId: studentId || '00000000-0000-4000-8000-0000000000ff', status: 'COMPLETED' },
   });
 
   return (
-    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
+    <div className="relative z-10 p-4 lg:p-6 max-w-5xl mx-auto">
+      {/* Decorative CampusCab background — fixed layer behind all dashboard content */}
+      <BackgroundSlideshow
+        className="fixed inset-0 -z-10"
+        overlayClassName="cc-dashboard-scrim"
+      />
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[var(--foreground)]">

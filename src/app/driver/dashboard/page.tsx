@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { toggleDriverOnline } from '@/lib/actions/driver';
 import OnlineToggle from './OnlineToggle';
+import BackgroundSlideshow from '@/components/background-slideshow';
 
 export default async function DriverDashboard() {
   const session = await auth();
@@ -82,7 +83,13 @@ export default async function DriverDashboard() {
   });
 
   return (
-    <div className="p-4 lg:p-6 max-w-5xl mx-auto">
+    <div className="relative z-10 p-4 lg:p-6 max-w-5xl mx-auto">
+      {/* Decorative CampusCab background — fixed layer behind all dashboard content */}
+      <BackgroundSlideshow
+        className="fixed inset-0 -z-10"
+        overlayClassName="cc-dashboard-scrim"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
