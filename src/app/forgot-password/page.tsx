@@ -116,7 +116,7 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-[var(--muted)] mt-1">University Transportation</p>
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+        <div className="cc-card rounded-2xl p-6 sm:p-7 shadow-[var(--shadow-lg)]">
           {/* Step indicators */}
           <div className="flex items-center justify-center gap-2 mb-4">
             {(['identify', 'answer', 'reset'] as Step[]).map((s, i) => (
@@ -158,7 +158,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Link
                 href="/login"
-                className="block w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm text-center hover:bg-[var(--primary-hover)] transition-colors"
+                className="block w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm text-center hover:bg-[var(--primary-hover)] transition-colors"
               >
                 Go to Sign in
               </Link>
@@ -178,14 +178,14 @@ export default function ForgotPasswordPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                      className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
                       placeholder="you@university.edu"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
+                    className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                   >
                     {loading ? 'Looking up account...' : 'Continue'}
                   </button>
@@ -195,7 +195,7 @@ export default function ForgotPasswordPage() {
               {/* Step 2: Answer hint question */}
               {step === 'answer' && (
                 <form onSubmit={handleVerify} className="space-y-4">
-                  <div className="p-3 bg-[var(--background)] border border-[var(--border)] rounded-md">
+                  <div className="p-3 bg-[var(--background)] border border-[var(--border)] rounded-xl">
                     <p className="text-xs text-[var(--muted)] mb-1">Your security question:</p>
                     <p className="text-sm font-medium text-[var(--foreground)]">{hintQuestion}</p>
                   </div>
@@ -218,7 +218,7 @@ export default function ForgotPasswordPage() {
                         setHintAnswerError(validateHintAnswer(hintQuestion, hintAnswer) || '');
                       }}
                       required
-                      className={`w-full px-3 py-2 border rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
+                      className={`w-full px-3 py-2 border rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent ${
                         hintAnswerError ? 'border-red-400 dark:border-red-500' : 'border-[var(--border)]'
                       }`}
                       placeholder="Type your answer"
@@ -229,7 +229,7 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   {/* Collapsible hints section */}
-                  <div className="border border-[var(--border)] rounded-md overflow-hidden">
+                  <div className="border border-[var(--border)] rounded-xl overflow-hidden">
                     <button
                       type="button"
                       onClick={() => setShowHints(!showHints)}
@@ -259,7 +259,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
+                    className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                   >
                     {loading ? 'Verifying...' : 'Verify Answer'}
                   </button>
@@ -299,7 +299,7 @@ export default function ForgotPasswordPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
+                    className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
                   >
                     {loading ? 'Resetting password...' : 'Reset Password'}
                   </button>

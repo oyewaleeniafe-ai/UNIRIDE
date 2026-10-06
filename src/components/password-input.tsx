@@ -39,7 +39,7 @@ export default function PasswordInput({
         id={id}
         name={name}
         autoComplete={autoComplete}
-        className={`w-full px-3 py-2 pr-10 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${className}`}
+        className={`w-full px-3 py-2 pr-10 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${className}`}
       />
       <button
         type="button"

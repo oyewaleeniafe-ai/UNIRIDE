@@ -7,6 +7,7 @@ import { sendRideAcceptedEmail, sendRideStartedEmail, sendRideCompletedEmail, se
 import { logAudit, logTripStatusChange } from '@/lib/audit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { calculateFare } from '@/lib/paystack';
 
 async function getRateLimitId(): Promise<string> {
@@ -227,6 +228,17 @@ export async function rejectTrip(tripId: string) {
 }
 
 export async function startTrip(tripId: string) {
+  try {
+    return await startTripImpl(tripId);
+  } catch (e) {
+    // Surface failures to the caller instead of throwing (an unhandled throw
+    // makes the button silently do nothing from the UI's perspective).
+    const message = e instanceof Error ? e.message : 'Failed to start ride.';
+    return { error: message === 'Not authenticated' ? 'You must be signed in to start rides.' : message };
+  }
+}
+
+async function startTripImpl(tripId: string) {
   const userId = await getUserId();
   const session = await auth();
 
@@ -255,6 +267,9 @@ export async function startTrip(tripId: string) {
   await prisma.rideStatusHistory.create({
     data: { tripId, userId, from: 'ACCEPTED', to: 'IN_PROGRESS' },
   });
+
+  revalidatePath('/driver/rides');
+  revalidatePath('/driver/dashboard');
 
   // Audit log (non-blocking)
   logTripStatusChange({
@@ -298,6 +313,17 @@ export async function startTrip(tripId: string) {
 }
 
 export async function completeTrip(tripId: string) {
+  try {
+    return await completeTripImpl(tripId);
+  } catch (e) {
+    // Surface failures to the caller instead of throwing (an unhandled throw
+    // makes the button silently do nothing from the UI's perspective).
+    const message = e instanceof Error ? e.message : 'Failed to complete ride.';
+    return { error: message === 'Not authenticated' ? 'You must be signed in to complete rides.' : message };
+  }
+}
+
+async function completeTripImpl(tripId: string) {
   const userId = await getUserId();
   const session = await auth();
 
@@ -339,6 +365,9 @@ export async function completeTrip(tripId: string) {
     where: { id: driver.id },
     data: { totalTrips: { increment: 1 } },
   });
+
+  revalidatePath('/driver/rides');
+  revalidatePath('/driver/dashboard');
 
   // Audit log (non-blocking)
   logTripStatusChange({
@@ -406,6 +435,16 @@ export async function getActiveTripStatus() {
 }
 
 export async function cancelTrip(tripId: string) {
+  try {
+    return await cancelTripImpl(tripId);
+  } catch (e) {
+    // Surface failures to the caller instead of throwing
+    const message = e instanceof Error ? e.message : 'Failed to cancel ride.';
+    return { error: message === 'Not authenticated' ? 'You must be signed in to cancel rides.' : message };
+  }
+}
+
+async function cancelTripImpl(tripId: string) {
   const userId = await getUserId();
 
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });

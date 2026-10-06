@@ -11,14 +11,14 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-[var(--muted)] mt-1">University Transportation</p>
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 text-center">
+        <div className="cc-card rounded-2xl p-6 sm:p-7 shadow-[var(--shadow-lg)] text-center">
           <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">Password Recovery</h2>
           <p className="text-sm text-[var(--muted)] mb-4">
             Use the forgot password flow to reset your password securely.
           </p>
           <Link
             href="/forgot-password"
-            className="inline-block w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm text-center hover:bg-[var(--primary-hover)] transition-colors"
+            className="inline-block w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm text-center hover:bg-[var(--primary-hover)] transition-colors"
           >
             Recover Password
           </Link>

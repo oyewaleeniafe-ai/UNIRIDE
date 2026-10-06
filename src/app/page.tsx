@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { CarFront, Users, ShieldCheck, MapPin, CreditCard, Star } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Campus Cab — University Ride-Hailing Platform',
@@ -27,32 +28,32 @@ export const metadata: Metadata = {
 
 const FEATURES = [
   {
-    icon: '🚕',
+    icon: CarFront,
     title: 'Solo Quick Cab',
     desc: 'Direct point-to-point ride. Fastest way across campus.',
   },
   {
-    icon: '🚐',
+    icon: Users,
     title: 'Shared Shuttle',
     desc: 'Carpool with fellow students and split the fare.',
   },
   {
-    icon: '🛡️',
+    icon: ShieldCheck,
     title: 'SOS Safety Button',
     desc: 'One-tap emergency alert with GPS location sharing.',
   },
   {
-    icon: '📍',
+    icon: MapPin,
     title: 'Live Ride Tracking',
     desc: 'Real-time status updates from request to arrival.',
   },
   {
-    icon: '💳',
+    icon: CreditCard,
     title: 'Direct Driver Payment',
     desc: 'Zero platform fees — 100% of the fare goes to the driver.',
   },
   {
-    icon: '⭐',
+    icon: Star,
     title: 'Rating System',
     desc: 'Rate your ride and help maintain quality drivers.',
   },
@@ -132,9 +133,11 @@ export default async function HomePage() {
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 hover:shadow-md transition-shadow"
+                className="cc-card cc-card-hover rounded-2xl p-6"
               >
-                <div className="text-3xl mb-3">{f.icon}</div>
+                <span className="cc-icon-tile w-11 h-11 mb-4">
+                  <f.icon className="w-5 h-5" />
+                </span>
                 <h3 className="text-sm font-bold text-[var(--foreground)]">{f.title}</h3>
                 <p className="mt-1 text-xs text-[var(--muted)] leading-relaxed">{f.desc}</p>
               </div>

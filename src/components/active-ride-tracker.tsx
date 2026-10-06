@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition, useCallback } from 'react';
 import { getActiveTripStatus, cancelTrip } from '@/lib/actions/trips';
 import SOSButton from '@/components/sos-button';
+import { Check, ClipboardList, CarFront, Route, CircleCheckBig } from 'lucide-react';
 
 interface TripData {
   id: string;
@@ -25,10 +26,10 @@ interface ActiveRideTrackerProps {
 }
 
 const RIDE_STEPS = [
-  { key: 'PENDING', label: 'Requested', icon: '📋', description: 'Waiting for a driver' },
-  { key: 'ACCEPTED', label: 'Accepted', icon: '🚗', description: 'Driver is on the way' },
-  { key: 'IN_PROGRESS', label: 'In Progress', icon: '🛣️', description: 'Ride is underway' },
-  { key: 'COMPLETED', label: 'Completed', icon: '✅', description: 'Arrived at destination' },
+  { key: 'PENDING', label: 'Requested', icon: ClipboardList, description: 'Waiting for a driver' },
+  { key: 'ACCEPTED', label: 'Accepted', icon: CarFront, description: 'Driver is on the way' },
+  { key: 'IN_PROGRESS', label: 'In Progress', icon: Route, description: 'Ride is underway' },
+  { key: 'COMPLETED', label: 'Completed', icon: CircleCheckBig, description: 'Arrived at destination' },
 ] as const;
 
 const STATUS_INDEX: Record<string, number> = {
@@ -123,9 +124,9 @@ export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProp
   const showGracePeriod = trip.status === 'PENDING' && graceTimeLeft > 0;
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg overflow-hidden">
+    <div className="cc-card rounded-2xl overflow-hidden">
       {/* Header with live indicator */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-color)]">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
@@ -135,7 +136,7 @@ export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProp
             Live Ride Tracker
           </span>
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusColors[trip.status] || ''}`}>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusColors[trip.status] || ''}`}>
           {trip.status.replace('_', ' ')}
         </span>
       </div>
@@ -144,7 +145,7 @@ export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProp
       <div className="px-4 py-4">
         <div className="flex items-center justify-between relative">
           {/* Background line */}
-          <div className="absolute top-3 left-0 right-0 h-0.5 bg-[var(--border)]" />
+          <div className="absolute top-3 left-0 right-0 h-0.5 bg-[var(--border-color)]" />
           {/* Progress line */}
           <div
             className="absolute top-3 left-0 h-0.5 bg-[var(--primary)] transition-all duration-700 ease-in-out"
@@ -161,13 +162,17 @@ export default function ActiveRideTracker({ initialTrip }: ActiveRideTrackerProp
                 {/* Step circle */}
                 <div
                   className={`
-                    w-6 h-6 rounded-full flex items-center justify-center text-xs border-2 transition-all duration-500
+                    w-7 h-7 rounded-full flex items-center justify-center border-2 transition-all duration-500
                     ${isCompleted ? 'bg-[var(--primary)] border-[var(--primary)] text-white' : ''}
-                    ${isCurrent ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/30' : ''}
-                    ${isFuture ? 'bg-[var(--background)] border-[var(--border)] text-[var(--muted)]' : ''}
+                    ${isCurrent ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[0_0_0_4px_var(--primary-soft)]' : ''}
+                    ${isFuture ? 'bg-[var(--surface)] border-[var(--border-color)] text-[var(--muted-fg)]' : ''}
                   `}
                 >
-                  {isCompleted ? '✓' : step.icon}
+                  {isCompleted ? (
+                    <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                  ) : (
+                    <step.icon className="w-3.5 h-3.5" strokeWidth={2.2} />
+                  )}
                 </div>
 
                 {/* Step label */}

@@ -45,16 +45,16 @@ export default async function DriverEarningsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 text-center">
+        <div className="cc-card rounded-2xl p-5 text-center">
           <p className="text-xs text-[var(--muted)] uppercase tracking-wide">Today</p>
           <p className="text-xl font-bold text-[var(--foreground)] mt-1">₦{todayEarnings.toLocaleString()}</p>
           <p className="text-xs text-[var(--muted)] mt-0.5">{todayTrips} rides</p>
         </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 text-center">
+        <div className="cc-card rounded-2xl p-5 text-center">
           <p className="text-xs text-[var(--muted)] uppercase tracking-wide">This Week</p>
           <p className="text-xl font-bold text-[var(--foreground)] mt-1">₦{weeklyEarnings.toLocaleString()}</p>
         </div>
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 text-center">
+        <div className="cc-card rounded-2xl p-5 text-center">
           <p className="text-xs text-[var(--muted)] uppercase tracking-wide">All Time</p>
           <p className="text-xl font-bold text-[var(--foreground)] mt-1">₦{totalEarnings.toLocaleString()}</p>
           <p className="text-xs text-[var(--muted)] mt-0.5">{completedTrips.length} rides</p>
@@ -96,7 +96,7 @@ export default async function DriverEarningsPage() {
             </table>
           </div>
         ) : (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 text-center">
+          <div className="cc-card rounded-2xl p-6 text-center">
             <p className="text-sm text-[var(--muted)]">No earnings yet.</p>
           </div>
         )}

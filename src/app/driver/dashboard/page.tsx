@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { toggleDriverOnline } from '@/lib/actions/driver';
 import OnlineToggle from './OnlineToggle';
 import BackgroundSlideshow from '@/components/background-slideshow';
+import RideActions from '@/components/ride-actions';
+import { CarFront, Activity, Banknote, Bell, Navigation } from 'lucide-react';
 
 export default async function DriverDashboard() {
   const session = await auth();
@@ -76,6 +78,10 @@ export default async function DriverDashboard() {
       }))._sum.totalFare || 0
     : 0;
 
+  const activeTripPaid = activeTrip
+    ? (await prisma.payment.findFirst({ where: { tripId: activeTrip.id, status: 'SUCCESSFUL' } })) !== null
+    : false;
+
   const notifications = await prisma.notification.findMany({
     where: { userId, isRead: false },
     orderBy: { createdAt: 'desc' },
@@ -91,14 +97,19 @@ export default async function DriverDashboard() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-[var(--foreground)]">
-            Welcome, {user?.name || 'Driver'}
-          </h1>
-          <p className="text-sm text-[var(--muted)] mt-0.5">
-            ID: {driver?.driverId} · {user?.phone}
-          </p>
+      <div className="flex items-center justify-between gap-3 mb-7">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-full bg-[var(--primary)] text-[var(--primary-text)] flex items-center justify-center text-lg font-bold shadow-[var(--shadow-sm)] shrink-0">
+            {(user?.name || 'D').charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-[var(--foreground)] truncate">
+              Welcome, {user?.name || 'Driver'}
+            </h1>
+            <p className="text-sm text-[var(--muted)] truncate">
+              ID: {driver?.driverId} · {user?.phone}
+            </p>
+          </div>
         </div>
         <OnlineToggle
           initialOnline={driver?.isOnline || false}
@@ -108,8 +119,13 @@ export default async function DriverDashboard() {
 
       {/* Vehicle & Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
-          <h3 className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide mb-2">Vehicle</h3>
+        <div className="cc-card rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="cc-icon-tile w-8 h-8 rounded-lg">
+              <CarFront className="w-4 h-4" />
+            </span>
+            <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Vehicle</h3>
+          </div>
           {driver?.vehicle ? (
             <>
               <p className="text-sm font-medium text-[var(--foreground)]">
@@ -124,8 +140,13 @@ export default async function DriverDashboard() {
           )}
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
-          <h3 className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide mb-2">Status</h3>
+        <div className="cc-card rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="cc-icon-tile w-8 h-8 rounded-lg">
+              <Activity className="w-4 h-4" />
+            </span>
+            <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Status</h3>
+          </div>
           <p className="text-sm font-medium text-[var(--foreground)]">
             {driver?.isOnline ? '● Online' : '○ Offline'}
           </p>
@@ -134,8 +155,13 @@ export default async function DriverDashboard() {
           </p>
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
-          <h3 className="text-xs font-medium text-[var(--muted)] uppercase tracking-wide mb-2">Earnings</h3>
+        <div className="cc-card rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="cc-icon-tile w-8 h-8 rounded-lg">
+              <Banknote className="w-4 h-4" />
+            </span>
+            <h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Earnings</h3>
+          </div>
           <p className="text-2xl font-bold text-[var(--foreground)]">₦{totalEarnings.toLocaleString()}</p>
           <p className="text-xs text-[var(--muted)] mt-0.5">
             {driver?.totalTrips || 0} completed trips
@@ -145,7 +171,7 @@ export default async function DriverDashboard() {
 
       {/* Inspection Warning */}
       {!isInspectionComplete && driver?.isOnline === false && (
-        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-2xl">
           <p className="text-sm text-yellow-800 dark:text-yellow-300 font-medium">
             Complete your vehicle inspection before going online.
           </p>
@@ -159,11 +185,16 @@ export default async function DriverDashboard() {
       {notifications.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Notifications</h2>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
+          <div className="cc-card rounded-2xl divide-y divide-[var(--border-color)] overflow-hidden">
             {notifications.map((n) => (
-              <div key={n.id} className="p-3">
-                <p className="text-sm font-medium text-[var(--foreground)]">{n.title}</p>
-                <p className="text-xs text-[var(--muted)] mt-0.5">{n.message}</p>
+              <div key={n.id} className="p-4 flex items-start gap-3">
+                <span className="cc-icon-tile w-8 h-8 shrink-0 rounded-full">
+                  <Bell className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-[var(--foreground)]">{n.title}</p>
+                  <p className="text-xs text-[var(--muted)] mt-0.5">{n.message}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -174,9 +205,9 @@ export default async function DriverDashboard() {
       {activeTrip && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Active Ride</h2>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
+          <div className="cc-card rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${
                 activeTrip.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
                 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
               }`}>
@@ -199,6 +230,13 @@ export default async function DriverDashboard() {
             <p className="text-sm text-[var(--muted)] mt-2">
               Passenger: <span className="font-medium text-[var(--foreground)]">{activeTrip.student.user.name}</span>
             </p>
+            <div className="mt-4 pt-3 border-t border-[var(--border)]">
+              <RideActions
+                tripId={activeTrip.id}
+                status={activeTrip.status as 'ACCEPTED' | 'IN_PROGRESS'}
+                paymentConfirmed={activeTripPaid}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -222,16 +260,21 @@ export default async function DriverDashboard() {
           <Link href="/driver/rides" className="text-xs text-[var(--primary)] hover:underline">View all</Link>
         </div>
         {completedTrips.length > 0 ? (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg divide-y divide-[var(--border)]">
+          <div className="cc-card rounded-2xl divide-y divide-[var(--border-color)] overflow-hidden">
             {completedTrips.map((trip) => (
-              <div key={trip.id} className="p-3 flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-[var(--foreground)] truncate">
-                    {trip.pickupLocation.name} → {trip.dropoffLocation.name}
-                  </p>
-                  <p className="text-xs text-[var(--muted)]">
-                    {trip.student.user.name} · {trip.passengerCount} pax
-                  </p>
+              <div key={trip.id} className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="cc-icon-tile w-9 h-9 shrink-0 rounded-full">
+                    <Navigation className="w-4 h-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                      {trip.pickupLocation.name} → {trip.dropoffLocation.name}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
+                      {trip.student.user.name} · {trip.passengerCount} pax
+                    </p>
+                  </div>
                 </div>
                 <span className="text-sm font-bold text-[var(--foreground)] whitespace-nowrap ml-3">
                   ₦{trip.totalFare.toLocaleString()}
@@ -240,7 +283,7 @@ export default async function DriverDashboard() {
             ))}
           </div>
         ) : (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 text-center">
+          <div className="cc-card rounded-2xl p-6 text-center">
             <p className="text-sm text-[var(--muted)]">No completed rides yet.</p>
           </div>
         )}
@@ -251,7 +294,7 @@ export default async function DriverDashboard() {
 
 function TripRequest({ trip }: { trip: { id: string; pickupLocation: { name: string }; dropoffLocation: { name: string }; passengerCount: number; totalFare: number; rideType: string; student: { user: { name: string } } } }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
+    <div className="cc-card rounded-2xl p-5">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-[var(--foreground)]">{trip.student.user.name}</span>
         <span className="text-sm font-bold text-[var(--foreground)]">₦{trip.totalFare.toLocaleString()}</span>
@@ -287,7 +330,7 @@ function AcceptRejectButtons({ tripId }: { tripId: string }) {
             const { acceptTrip } = await import('@/lib/actions/trips');
             await acceptTrip(tripId);
           }}
-          className="px-3 py-1.5 bg-[var(--primary)] text-[var(--primary-text)] rounded text-xs font-medium hover:bg-[var(--primary-hover)] transition-colors"
+          className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-text)] rounded-lg text-xs font-semibold hover:bg-[var(--primary-hover)] transition-colors"
         >
           Accept
         </button>
@@ -299,10 +342,10 @@ function AcceptRejectButtons({ tripId }: { tripId: string }) {
       }}>
         <button
           type="submit"
-          className="px-3 py-1.5 border border-[var(--border)] text-[var(--muted)] rounded text-xs font-medium hover:bg-[var(--surface-hover)] transition-colors"
-        >
-          Decline
-        </button>
+        className="px-4 py-2 border border-[var(--border-color)] text-[var(--muted)] rounded-lg text-xs font-semibold hover:bg-[var(--surface-hover)] transition-colors"
+      >
+        Decline
+      </button>
       </form>
     </div>
   );

@@ -22,7 +22,7 @@ export default async function DriverProfilePage() {
     <div className="p-4 lg:p-6 max-w-2xl mx-auto">
       <h1 className="text-xl font-bold text-[var(--foreground)] mb-6">Profile</h1>
 
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+      <div className="cc-card rounded-2xl p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-[var(--primary)] bg-opacity-10 flex items-center justify-center text-xl font-bold text-[var(--primary)]">
             {user?.name?.charAt(0)?.toUpperCase() || 'D'}

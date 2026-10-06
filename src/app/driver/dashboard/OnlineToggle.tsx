@@ -33,13 +33,18 @@ export default function OnlineToggle({
       <button
         onClick={handleToggle}
         disabled={pending}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-colors ${
           isOnline
             ? 'bg-green-600 text-white hover:bg-green-700'
-            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
+            : 'bg-[var(--surface)] border border-[var(--border-color)] text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
         } disabled:opacity-50`}
       >
-        {pending ? '...' : isOnline ? '● Online' : '○ Offline'}
+        <span
+          className={`w-2 h-2 rounded-full ${
+            isOnline ? 'bg-white animate-pulse' : 'bg-[var(--muted-fg)]'
+          }`}
+        />
+        {pending ? '…' : isOnline ? 'Online' : 'Offline'}
       </button>
       {error && (
         <p className="text-xs text-[var(--danger)]">{error}</p>

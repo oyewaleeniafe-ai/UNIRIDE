@@ -68,22 +68,22 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="text-center mb-8 cc-text-lift">
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">Campus Cab</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">CampusCab</h1>
           <p className="text-sm text-[var(--muted)] mt-1">University Transportation</p>
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">Sign in to your account</h2>
+        <div className="cc-card rounded-2xl shadow-[var(--shadow-lg)] p-6 sm:p-7">
+          <h2 className="text-lg font-semibold text-[var(--foreground)] mb-5">Sign in to your account</h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-400">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
               <p>{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4 login-placeholder-hidden">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-[var(--foreground)] mb-1.5">
                 Email
               </label>
               <input
@@ -92,7 +92,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent"
+                className="cc-input"
                 placeholder="you@university.edu"
               />
             </div>
@@ -114,7 +114,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
+              className="cc-btn-primary w-full"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -131,13 +131,13 @@ export default function LoginPage() {
             <div className="flex gap-3 justify-center">
               <Link
                 href="/register/student"
-                className="px-4 py-2 border border-[var(--border)] rounded-md text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors text-sm"
+                className="px-4 py-2 border border-[var(--border-color)] rounded-xl text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors text-sm font-medium"
               >
                 Register as Student
               </Link>
               <Link
                 href="/register/driver"
-                className="px-4 py-2 border border-[var(--border)] rounded-md text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors text-sm"
+                className="px-4 py-2 border border-[var(--border-color)] rounded-xl text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors text-sm font-medium"
               >
                 Register as Driver
               </Link>

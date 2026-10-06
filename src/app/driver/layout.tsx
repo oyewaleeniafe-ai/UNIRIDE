@@ -22,7 +22,7 @@ export default async function DriverLayout({
   return (
     <div className="flex min-h-screen">
       <Navigation role="DRIVER" />
-      <main className="flex-1 lg:ml-0 pt-12 pb-16 lg:pb-0 flex flex-col">
+      <main className="flex-1 pt-14 pb-28 lg:pb-0 flex flex-col">
         <div className="flex-1">{children}</div>
         <Footer />
       </main>

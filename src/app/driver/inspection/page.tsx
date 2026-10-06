@@ -60,13 +60,13 @@ export default function InspectionForm() {
   if (success) {
     return (
       <div className="p-4 lg:p-6 max-w-lg mx-auto">
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 text-center">
+        <div className="cc-card rounded-2xl p-6 text-center">
           <div className="text-4xl mb-3">✓</div>
           <h2 className="text-lg font-semibold text-[var(--foreground)] mb-1">Inspection Complete</h2>
           <p className="text-sm text-[var(--muted)] mb-4">Your vehicle has passed inspection. You can now go online.</p>
           <button
             onClick={() => router.push('/driver/dashboard')}
-            className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-text)] rounded-md text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
+            className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
           >
             Back to Dashboard
           </button>
@@ -131,7 +131,7 @@ export default function InspectionForm() {
       <button
         onClick={handleSubmit}
         disabled={!allChecked || pending}
-        className="w-full py-3 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
+        className="w-full py-3 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors"
       >
         {pending ? 'Submitting...' : 'Submit Inspection'}
       </button>

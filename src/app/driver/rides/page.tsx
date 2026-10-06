@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { acceptTrip, startTrip, completeTrip, cancelTrip } from '@/lib/actions/trips';
+import { acceptTrip, cancelTrip } from '@/lib/actions/trips';
+import RideActions from '@/components/ride-actions';
 
 export default async function DriverRidesPage() {
   const session = await auth();
@@ -22,6 +23,10 @@ export default async function DriverRidesPage() {
         orderBy: { createdAt: 'desc' },
       })
     : null;
+
+  const activeTripPaid = activeTrip
+    ? (await prisma.payment.findFirst({ where: { tripId: activeTrip.id, status: 'SUCCESSFUL' } })) !== null
+    : false;
 
   const pendingTrips = driver
     ? await prisma.trip.findMany({
@@ -80,9 +85,9 @@ export default async function DriverRidesPage() {
       {activeTrip && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Active Ride</h2>
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
+          <div className="cc-card rounded-2xl p-5">
             <div className="flex items-center justify-between mb-2">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusColors[activeTrip.status] || ''}`}>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${statusColors[activeTrip.status] || ''}`}>
                 {activeTrip.status.replace('_', ' ')}
               </span>
               <span className="text-sm font-bold text-[var(--foreground)]">₦{activeTrip.totalFare.toLocaleString()}</span>
@@ -100,26 +105,12 @@ export default async function DriverRidesPage() {
             <p className="text-sm text-[var(--muted)] mt-2">
               Passenger: <span className="font-medium text-[var(--foreground)]">{activeTrip.student.user.name}</span> · {activeTrip.passengerCount} pax
             </p>
-            <div className="flex gap-2 mt-4 pt-3 border-t border-[var(--border)]">
-              {activeTrip.status === 'ACCEPTED' && (
-                <form action={async () => { 'use server'; await startTrip(activeTrip.id); }}>
-                  <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition-colors">
-                    Start Ride
-                  </button>
-                </form>
-              )}
-              {activeTrip.status === 'IN_PROGRESS' && (
-                <form action={async () => { 'use server'; await completeTrip(activeTrip.id); }}>
-                  <button type="submit" className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-text)] rounded text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors">
-                    Complete Ride
-                  </button>
-                </form>
-              )}
-              <form action={async () => { 'use server'; await cancelTrip(activeTrip.id); }}>
-                <button type="submit" className="px-4 py-2 border border-[var(--border)] text-[var(--danger)] rounded text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                  Cancel
-                </button>
-              </form>
+            <div className="mt-4 pt-3 border-t border-[var(--border)]">
+              <RideActions
+                tripId={activeTrip.id}
+                status={activeTrip.status as 'ACCEPTED' | 'IN_PROGRESS'}
+                paymentConfirmed={activeTripPaid}
+              />
             </div>
           </div>
         </div>
@@ -131,7 +122,7 @@ export default async function DriverRidesPage() {
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Pending Requests</h2>
           <div className="space-y-2">
             {pendingTrips.map((trip) => (
-              <div key={trip.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4">
+              <div key={trip.id} className="cc-card rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-[var(--foreground)]">{trip.student.user.name}</span>
                   <span className="text-sm font-bold text-[var(--foreground)]">₦{trip.totalFare.toLocaleString()}</span>
@@ -150,10 +141,10 @@ export default async function DriverRidesPage() {
                   <span className="text-xs text-[var(--muted)]">{trip.passengerCount} pax · {trip.rideType.replace('_', ' ')}</span>
                   <div className="flex gap-2">
                     <form action={async () => { 'use server'; await acceptTrip(trip.id); }}>
-                      <button type="submit" className="px-3 py-1.5 bg-[var(--primary)] text-[var(--primary-text)] rounded text-xs font-medium hover:bg-[var(--primary-hover)] transition-colors">Accept</button>
+                      <button type="submit" className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-text)] rounded-lg text-xs font-semibold hover:bg-[var(--primary-hover)] transition-colors">Accept</button>
                     </form>
                     <form action={async () => { 'use server'; await cancelTrip(trip.id); }}>
-                      <button type="submit" className="px-3 py-1.5 border border-[var(--border)] text-[var(--muted)] rounded text-xs font-medium hover:bg-[var(--surface-hover)] transition-colors">Decline</button>
+                      <button type="submit" className="px-4 py-2 border border-[var(--border-color)] text-[var(--muted)] rounded-lg text-xs font-semibold hover:bg-[var(--surface-hover)] transition-colors">Decline</button>
                     </form>
                   </div>
                 </div>
@@ -169,7 +160,7 @@ export default async function DriverRidesPage() {
         {completedTrips.length > 0 ? (
           <div className="space-y-2">
             {completedTrips.map((trip) => (
-              <div key={trip.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3">
+              <div key={trip.id} className="cc-card rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-[var(--foreground)]">
                     {trip.pickupLocation.name} → {trip.dropoffLocation.name}
@@ -201,7 +192,7 @@ export default async function DriverRidesPage() {
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Cancelled</h2>
           <div className="space-y-2">
             {cancelledTrips.map((trip) => (
-              <div key={trip.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 opacity-60">
+              <div key={trip.id} className="cc-card rounded-2xl p-4 opacity-60">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--foreground)]">
                     {trip.pickupLocation.name} → {trip.dropoffLocation.name}

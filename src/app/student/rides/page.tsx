@@ -73,7 +73,7 @@ export default async function StudentRidesPage() {
         {completedTrips.length > 0 ? (
           <div className="space-y-2">
             {completedTrips.map((trip) => (
-              <div key={trip.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3">
+              <div key={trip.id} className="cc-card rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-[var(--foreground)]">
                     {trip.pickupLocation.name} → {trip.dropoffLocation.name}
@@ -115,7 +115,7 @@ export default async function StudentRidesPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 text-center">
+          <div className="cc-card rounded-2xl p-6 text-center">
             <p className="text-sm text-[var(--muted)]">No completed trips yet.</p>
             <Link href="/student/book" className="inline-block mt-2 text-sm text-[var(--primary)] hover:underline">Book a ride →</Link>
           </div>
@@ -128,7 +128,7 @@ export default async function StudentRidesPage() {
           <h2 className="text-sm font-semibold text-[var(--foreground)] mb-2 uppercase tracking-wide">Cancelled</h2>
           <div className="space-y-2">
             {cancelledTrips.map((trip) => (
-              <div key={trip.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 opacity-60">
+              <div key={trip.id} className="cc-card rounded-2xl p-4 opacity-60">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--foreground)]">
                     {trip.pickupLocation.name} → {trip.dropoffLocation.name}

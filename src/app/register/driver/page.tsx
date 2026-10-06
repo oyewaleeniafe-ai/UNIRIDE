@@ -76,7 +76,7 @@ export default function RegisterDriverPage() {
           <p className="text-sm text-[var(--muted)] mt-1">Driver Registration</p>
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+        <div className="cc-card rounded-2xl p-6 sm:p-7 shadow-[var(--shadow-lg)]">
           <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">Create your driver account</h2>
 
           {error && (
@@ -89,25 +89,25 @@ export default function RegisterDriverPage() {
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Full Name</label>
               <input type="text" value={form.name} onChange={(e) => updateField('name', e.target.value)} required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Driver ID</label>
               <input type="text" value={form.driverId} onChange={(e) => updateField('driverId', e.target.value)} required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Email</label>
               <input type="email" value={form.email} onChange={(e) => updateField('email', e.target.value)} required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Phone Number</label>
               <input type="tel" value={form.phone} onChange={(e) => updateField('phone', e.target.value)} required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
             </div>
 
             <div>
@@ -131,7 +131,7 @@ export default function RegisterDriverPage() {
                 value={form.hintQuestion}
                 onChange={(e) => updateField('hintQuestion', e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
               >
                 <option value="" disabled>Select a security question</option>
                 <option value="What is your favorite food?">What is your favorite food?</option>
@@ -146,7 +146,7 @@ export default function RegisterDriverPage() {
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Hint Answer</label>
               <input type="text" value={form.hintAnswer} onChange={(e) => updateField('hintAnswer', e.target.value)} onBlur={onHintAnswerBlur} required
-                className={`w-full px-3 py-2 border rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${
+                className={`w-full px-3 py-2 border rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] ${
                   hintAnswerError ? 'border-red-400 dark:border-red-500' : 'border-[var(--border)]'
                 }`}
                 placeholder="e.g. Jollof rice" />
@@ -163,12 +163,12 @@ export default function RegisterDriverPage() {
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Make</label>
                 <input type="text" value={form.vehicleMake} onChange={(e) => updateField('vehicleMake', e.target.value)} required placeholder="Toyota"
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Model</label>
                 <input type="text" value={form.vehicleModel} onChange={(e) => updateField('vehicleModel', e.target.value)} required placeholder="Corolla"
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
               </div>
             </div>
 
@@ -176,17 +176,17 @@ export default function RegisterDriverPage() {
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Color</label>
                 <input type="text" value={form.vehicleColor} onChange={(e) => updateField('vehicleColor', e.target.value)} required placeholder="Silver"
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">License Plate</label>
                 <input type="text" value={form.licensePlate} onChange={(e) => updateField('licensePlate', e.target.value)} required placeholder="ABC-123-DE"
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-md bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
+                  className="w-full px-3 py-2 border border-[var(--border)] rounded-xl bg-[var(--background)] text-[var(--foreground)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)]" />
               </div>
             </div>
 
             <button type="submit" disabled={loading}
-              className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-md font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors">
+              className="w-full py-2.5 bg-[var(--primary)] text-[var(--primary-text)] rounded-xl font-medium text-sm hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors">
               {loading ? 'Creating account...' : 'Create Driver Account'}
             </button>
           </form>

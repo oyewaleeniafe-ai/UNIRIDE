@@ -25,34 +25,61 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  /* Refined radius + shadow scale — gives the whole app the modern
+     ride-hailing look (soft rounded cards, gentle elevation) without
+     touching any component code. Existing rounded-md/lg/xl/2xl utilities
+     pick these up automatically. */
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.375rem;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(16 24 40 / 0.08), 0 2px 4px -2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 12px 32px -8px rgb(16 24 40 / 0.16), 0 4px 8px -4px rgb(16 24 40 / 0.06);
+  --shadow-xl: 0 20px 48px -12px rgb(16 24 40 / 0.22), 0 8px 16px -8px rgb(16 24 40 / 0.08);
+}
+
 :root {
-  --background: #f8f9fa;
-  --foreground: #1a1a1a;
+  /* Lavender-tinted light palette (reference: soft purple backdrop, white
+     floating cards, blue-violet primary) — same neutral structure, warmer cast. */
+  --background: #f2f2fb;
+  --foreground: #17181f;
   --surface: #ffffff;
-  --surface-hover: #f0f1f3;
-  --border-color: #dee2e6;
-  --primary: #1a56db;
-  --primary-hover: #1648b8;
+  --surface-hover: #f3f3fa;
+  --surface-2: #eef0fa;
+  --border-color: #e8e9f4;
+  /* Alias: much of the app references var(--border) directly; point it at
+     the same token so every page picks up the refined border color. */
+  --border: var(--border-color);
+  --primary: #4338ca;
+  --primary-hover: #372fae;
+  --primary-soft: rgba(67, 56, 202, 0.08);
   --primary-text: #ffffff;
-  --muted: #6c757d;
-  --muted-fg: #868e96;
+  --muted: #62687a;
+  --muted-fg: #8b90a0;
   --danger: #dc3545;
   --danger-hover: #c82333;
-  --success: #28a745;
-  --warning: #ffc107;
+  --success: #16a34a;
+  --warning: #f59e0b;
 }
 
 .dark {
-  --background: #111318;
-  --foreground: #e4e6ea;
-  --surface: #1c1e24;
-  --surface-hover: #26282f;
-  --border-color: #2e3138;
-  --primary: #4d8cf5;
-  --primary-hover: #6ba0f7;
-  --primary-text: #111318;
-  --muted: #868e96;
-  --muted-fg: #6c757d;
+  /* Deep indigo-charcoal dark mode — intentionally violet-cast, not a grey invert. */
+  --background: #0d0e15;
+  --foreground: #e8e9f2;
+  --surface: #161824;
+  --surface-hover: #1e2130;
+  --surface-2: #1c1f2e;
+  --border-color: #272a3f;
+  --border: var(--border-color);
+  --primary: #818cf8;
+  --primary-hover: #a3adfb;
+  --primary-soft: rgba(129, 140, 248, 0.14);
+  --primary-text: #0d0e15;
+  --muted: #9ba1b5;
+  --muted-fg: #6d7386;
   --danger: #e85d6c;
   --danger-hover: #f07080;
   --success: #4cce6a;
@@ -60,11 +87,118 @@
 }
 
 body {
-  background: var(--background);
+  /* Gentle vertical gradient like the reference backdrop (pale lavender into
+     neutral); dark mode keeps a subtle indigo depth instead of flat black. */
+  background: linear-gradient(180deg, #ececf9 0%, #f3f3fa 45%, #f2f3f7 100%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background: linear-gradient(180deg, #0b0c13 0%, #0f1120 55%, #0d0e15 100%);
+  background-attachment: fixed;
+}
+
+/* ---- Shared UI primitives (CampusCab design system) ----
+   Thin utilities so every page presents cards, inputs and buttons the
+   same way. Purely presentational — no behaviour attached. */
+.cc-card {
+  background: var(--surface);
+  /* Reference look: cards float on the backdrop — hairline border, soft lift. */
+  border: 1px solid color-mix(in srgb, var(--border-color) 65%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.cc-card-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.cc-card-hover:hover {
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border-color));
+}
+
+.cc-input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cc-input::placeholder {
+  color: var(--muted-fg);
+}
+.cc-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.cc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  /* Full pill like the reference's primary CTAs */
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 14px -4px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.cc-btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.cc-btn-primary:active:not(:disabled) {
+  transform: scale(0.985);
+}
+.cc-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.cc-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.cc-btn-secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.cc-btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Soft tinted icon container used across dashboards and quick actions */
+.cc-icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 /* Custom scrollbar */
@@ -135,7 +269,7 @@ a[href*="netlify.com"] img {
 /* Stronger, theme-matched wash behind dashboard content so cards, tables and
    navigation stay fully readable in both light and dark mode. */
 .cc-dashboard-scrim {
-  background: rgba(248, 249, 250, 0.75);
+  background: rgba(238, 239, 250, 0.82);
 }
 .dark .cc-dashboard-scrim {
   background: rgba(17, 19, 24, 0.87);

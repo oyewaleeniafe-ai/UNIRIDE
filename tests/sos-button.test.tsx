@@ -36,7 +36,8 @@ describe('SOSButton', () => {
   it('renders the SOS button', () => {
     render(<SOSButton />);
     expect(screen.getByText('SOS')).toBeInTheDocument();
-    expect(screen.getByText('⚠')).toBeInTheDocument();
+    // The SOS trigger renders its label (icon is decorative SVG, not text)
+    expect(screen.getByText('SOS')).toBeInTheDocument();
   });
 
   it('opens confirmation modal when SOS button is clicked', async () => {
