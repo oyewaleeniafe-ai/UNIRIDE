@@ -29,6 +29,10 @@ export type AuditAction =
   | 'payment.failed'
   | 'payment.amount_mismatch'
   | 'payment.error'
+  // Payout actions
+  | 'payout.initiated'
+  | 'payout.succeeded'
+  | 'payout.failed'
   // Generic
   | 'system.error';
 

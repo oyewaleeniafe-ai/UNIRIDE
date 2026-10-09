@@ -35,7 +35,7 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Same-origin only — never intercept cross-origin (Paystack, fonts, etc.)
+  // Same-origin only — never intercept cross-origin (payment providers, fonts, etc.)
   if (url.origin !== self.location.origin) return;
 
   // API routes and Next.js internals: always network

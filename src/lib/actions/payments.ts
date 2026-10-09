@@ -2,12 +2,8 @@
 
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
-import {
-  calculateFare,
-  initializeTransaction,
-  verifyTransaction,
-  generatePaymentReference,
-} from '@/lib/paystack';
+import { calculateFare } from '@/lib/fares';
+import { createPayment, verifyPayment, createPayoutForTrip, type Provider } from '@/lib/payments';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
@@ -23,10 +19,27 @@ async function getRateLimitId(): Promise<string> {
 }
 
 /**
- * Initialize a payment for a trip.
- * Server calculates the fare — never trusts frontend amounts.
+ * Initialize a payment for a trip using the student's selected provider.
+ *
+ * The provider selection is part of the booking/payment flow now. If the
+ * frontend does not pass a provider, default to PalmPay as the primary
+ * provider. The backend still calculates the amount — it never trusts the
+ * frontend's amount.
  */
-export async function initializePayment(tripId: string) {
+export async function initializePayment(
+  tripId: string,
+  provider: Provider | 'PALMPAY' | 'OPAY' = 'PALMPAY'
+): Promise<{
+  success?: boolean;
+  error?: string;
+  checkoutUrl?: string;
+  reference?: string;
+  providerReference?: string | null;
+  paymentId?: string;
+  amount?: number;
+  breakdown?: { rideFare: number; platformFee: number; totalAmount: number } | null;
+  pending?: boolean;
+}> {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.payment);
   if (!limit.allowed) {
@@ -41,7 +54,6 @@ export async function initializePayment(tripId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userId = (session.user as any).id as string;
 
-  // Verify the user owns this trip
   const student = await prisma.student.findUnique({ where: { userId } });
   if (!student) {
     return { error: 'Student profile not found.' };
@@ -58,84 +70,85 @@ export async function initializePayment(tripId: string) {
     return { error: 'This trip is no longer accepting payments.' };
   }
 
-  // SECURITY: derive the fare from the trip's stored ride type — never from
-  // the client. The trip record is the server-side source of truth.
-  const rideType = trip.rideType;
-  if (rideType !== 'SOLO_QUICK_CAB' && rideType !== 'SHARED_SHUTTLE') {
+  if (
+    trip.rideType !== 'SOLO_QUICK_CAB' &&
+    trip.rideType !== 'SHARED_SHUTTLE'
+  ) {
     return { error: 'Invalid ride type on this trip.' };
   }
-  const passengerCount = trip.passengerCount;
 
-  // Check for existing successful payment (idempotent)
   const existingPayment = await prisma.payment.findFirst({
-    where: {
-      tripId,
-      userId,
-      status: 'SUCCESSFUL',
-    },
+    where: { tripId, userId, status: 'SUCCESSFUL' },
   });
   if (existingPayment) {
-    return { error: 'This trip has already been paid for.' };
+    return {
+      error: 'This trip has already been paid for.',
+      providerReference: existingPayment.providerReference,
+      paymentId: existingPayment.id,
+    };
   }
 
-  // Check for existing pending payment
   const pendingPayment = await prisma.payment.findFirst({
-    where: {
-      tripId,
-      userId,
-      status: 'PENDING',
-    },
+    where: { tripId, userId, status: 'PENDING' },
   });
 
-  // Reuse existing pending payment reference if still valid
-  if (pendingPayment) {
-    const payRef = pendingPayment.paystackReference;
-    if (payRef) {
-      // Verify its status with Paystack before returning
-      try {
-        const verification = await verifyTransaction(pendingPayment.reference);
-        if (verification.data.status === 'success') {
-          // Already paid - mark as successful
-          await markPaymentSuccessful(pendingPayment.id, verification.data);
-          return { error: 'This trip has already been paid for.' };
-        }
-      } catch {
-        // Paystack verification failed — allow re-initialization
-      }
-    }
+  // The Trip model does not store a provider preference, so the provider is
+  // always the student's explicit selection from the booking flow. Pending
+  // payments are re-routed to that same provider on retry.
+  const effectiveProvider: Provider =
+    provider === 'PALMPAY' || provider === 'OPAY' ? provider : 'PALMPAY';
 
-    // Refresh the fare from the trip's (server-side) ride type.
-    // The reference must stay STABLE — regenerating it would desync the
-    // Paystack transaction from our record and break callback verification.
-    const fare = calculateFare(rideType);
+  if (pendingPayment) {
+    const fare = calculateFare(trip.rideType);
     await prisma.payment.update({
       where: { id: pendingPayment.id },
       data: {
         rideFare: fare.rideFare,
-        appCharge: fare.appCharge,
+        platformFee: fare.platformFee,
         totalAmount: fare.totalAmount,
+        provider: effectiveProvider,
       },
     });
 
-    return createPaystackTransaction(pendingPayment.id, pendingPayment.reference, passengerCount, session.user.email || '');
+    const providerResult = await verifyPayment(
+      pendingPayment.reference,
+      effectiveProvider
+    );
+
+    if (providerResult.success && providerResult.alreadyVerified) {
+      return {
+        error: 'This trip has already been paid for.',
+        providerReference: pendingPayment.providerReference,
+        paymentId: pendingPayment.id,
+      };
+    }
+
+    return createPayment({
+      tripId: pendingPayment.tripId,
+      userId: pendingPayment.userId,
+      provider: effectiveProvider,
+      passengerCount: pendingPayment.passengerCount,
+      rideFare: fare.rideFare,
+      platformFee: fare.platformFee,
+      totalAmount: fare.totalAmount,
+      email: session.user.email || '',
+    });
   }
 
-  // Server-side fare calculation (fixed price by ride type)
-  const fare = calculateFare(rideType);
+  const fare = calculateFare(trip.rideType);
 
-  // Create payment record
-  const reference = generatePaymentReference();
   const payment = await prisma.payment.create({
     data: {
       userId,
       tripId,
-      reference,
-      passengerCount,
+      reference: `ccab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      passengerCount: trip.passengerCount,
       rideFare: fare.rideFare,
-      appCharge: fare.appCharge,
+      platformFee: fare.platformFee,
       totalAmount: fare.totalAmount,
       currency: 'NGN',
       status: 'PENDING',
+      provider: effectiveProvider,
     },
   });
 
@@ -146,70 +159,33 @@ export async function initializePayment(tripId: string) {
     entityId: payment.id,
     details: {
       tripId,
-      passengerCount,
+      passengerCount: trip.passengerCount,
       rideFare: fare.rideFare,
-      appCharge: fare.appCharge,
+      platformFee: fare.platformFee,
       totalAmount: fare.totalAmount,
-      reference,
+      provider: effectiveProvider,
     },
   }).catch(() => {});
 
-  return createPaystackTransaction(payment.id, reference, passengerCount, session.user.email || '');
+  return createPayment({
+    tripId: payment.tripId,
+    userId: payment.userId,
+    provider: effectiveProvider,
+    passengerCount: payment.passengerCount,
+    rideFare: fare.rideFare,
+    platformFee: fare.platformFee,
+    totalAmount: fare.totalAmount,
+    email: session.user.email || '',
+  });
 }
 
-async function createPaystackTransaction(
-  paymentId: string,
-  reference: string,
-  passengerCount: number,
-  email: string
-) {
-  try {
-    // Re-read the stored payment record — its amounts are the server-validated
-    // truth that was persisted at initialization time.
-    const stored = await prisma.payment.findUnique({ where: { id: paymentId } });
-    if (!stored) throw new Error('Payment record not found');
-    const amountInKobo = Math.round(stored.totalAmount * 100); // Convert naira to kobo
 
-    const result = await initializeTransaction(email, amountInKobo, reference, {
-      payment_id: paymentId,
-      passenger_count: passengerCount,
-    });
-
-    // Store the Paystack access code
-    await prisma.payment.update({
-      where: { id: paymentId },
-      data: { paystackReference: result.data.access_code },
-    });
-
-    return {
-      success: true,
-      authorizationUrl: result.data.authorization_url,
-      reference,
-      accessCode: result.data.access_code,
-      amount: stored.totalAmount,
-      breakdown: {
-        rideFare: stored.rideFare,
-        appCharge: stored.appCharge,
-        totalAmount: stored.totalAmount,
-      },
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Payment initialization failed';
-    logAudit({
-      action: 'payment.error',
-      entity: 'Payment',
-      entityId: paymentId,
-      details: { error: message, reference },
-    }).catch(() => {});
-    return { error: message };
-  }
-}
 
 /**
- * Verify a payment after Paystack callback.
- * Server-side verification — never trusts the frontend.
+ * Verify a payment after the provider callback.
+ * Server-side verification — never trusts the frontend alone.
  */
-export async function verifyPayment(reference: string) {
+export async function verifyPaymentHandler(reference: string) {
   const rateLimitId = await getRateLimitId();
   const limit = checkRateLimit(rateLimitId, RATE_LIMITS.payment);
   if (!limit.allowed) {
@@ -224,9 +200,7 @@ export async function verifyPayment(reference: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userId = (session.user as any).id as string;
 
-  const payment = await prisma.payment.findUnique({
-    where: { reference },
-  });
+  const payment = await prisma.payment.findUnique({ where: { reference } });
 
   if (!payment) {
     return { error: 'Payment not found.' };
@@ -236,119 +210,95 @@ export async function verifyPayment(reference: string) {
     return { error: 'Unauthorized.' };
   }
 
-  // Idempotent: if already successful, return success without re-verifying
   if (payment.status === 'SUCCESSFUL') {
     return {
       success: true,
       message: 'Payment already verified.',
       paymentId: payment.id,
+      providerReference: payment.providerReference,
     };
   }
 
-  // Verify with Paystack server-side
-  try {
-    const verification = await verifyTransaction(reference);
+  const providerResult = await verifyPayment(reference, payment.provider as Provider);
 
-    if (verification.data.status === 'success') {
-      // Verify the amount matches server-calculated amount (tamper protection)
-      const expectedAmountInKobo = Math.round(payment.totalAmount * 100);
-      if (verification.data.amount !== expectedAmountInKobo) {
-        logAudit({
-          userId,
-          action: 'payment.amount_mismatch',
-          entity: 'Payment',
-          entityId: payment.id,
-          details: {
-            expected: expectedAmountInKobo,
-            received: verification.data.amount,
-          },
-        }).catch(() => {});
-        return { error: 'Payment amount mismatch. Please contact support.' };
-      }
-
-      await markPaymentSuccessful(payment.id, verification.data);
-
-      return {
-        success: true,
-        message: 'Payment successful.',
-        paymentId: payment.id,
-      };
-    } else {
-      // Payment failed
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'FAILED',
-          failureReason: verification.data.gateway_response || 'Payment was not successful',
-        },
-      });
-
-      logAudit({
-        userId,
-        action: 'payment.failed',
-        entity: 'Payment',
-        entityId: payment.id,
-        details: {
-          reference,
-          gateway_response: verification.data.gateway_response,
-          status: verification.data.status,
-        },
-      }).catch(() => {});
-
-      return { error: verification.data.gateway_response || 'Payment was not successful.' };
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Verification failed';
-    return { error: `Payment verification failed: ${message}` };
+  if (providerResult.success) {
+    return {
+      success: true,
+      message: providerResult.alreadyVerified ? 'Payment already verified.' : 'Payment successful.',
+      paymentId: payment.id,
+      providerReference: payment.providerReference,
+    };
   }
+
+  return { error: providerResult.error };
 }
 
-async function markPaymentSuccessful(
-  paymentId: string,
-  paystackData: {
-    id: number;
-    status: string;
-    paid_at: string;
-    gateway_response: string;
+/**
+ * Initiate a driver payout for a completed trip.
+ * Used by driver/admin flows once payouts are approved for the merchant account.
+ */
+export async function initiateDriverPayout(tripId: string) {
+  const rateLimitId = await getRateLimitId();
+  const limit = checkRateLimit(rateLimitId, RATE_LIMITS.payment);
+  if (!limit.allowed) {
+    return { error: 'Too many payout requests. Please try again later.' };
   }
-) {
-  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
-  if (!payment) return;
 
-  // Idempotent check — don't re-process if already successful
-  if (payment.status === 'SUCCESSFUL') return;
+  const session = await auth();
+  if (!session?.user) {
+    return { error: 'You must be logged in.' };
+  }
 
-  await prisma.$transaction([
-    prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        status: 'SUCCESSFUL',
-        paystackReference: String(paystackData.id),
-        paidAt: new Date(paystackData.paid_at),
-      },
-    }),
-    prisma.trip.update({
-      where: { id: payment.tripId },
-      data: {
-        appCharge: payment.appCharge,
-        driverEarnings: payment.rideFare,
-      },
-    }),
-  ]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userRole = (session.user as any).role;
+
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId },
+    include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
+  });
+
+  if (!trip) {
+    return { error: 'Trip not found.' };
+  }
+
+  const payment = trip.payments[0];
+  if (!payment || payment.status !== 'SUCCESSFUL') {
+    return { error: 'No successful payment found for this trip.' };
+  }
+
+  if (userRole !== 'STUDENT' && userRole !== 'DRIVER' && userRole !== 'ADMIN') {
+    return { error: 'You are not authorized to initiate payouts.' };
+  }
+
+  const result = await createPayoutForTrip({
+    tripId,
+    paymentId: payment.id,
+    provider: payment.provider as Provider,
+  });
+
+  if (result.error) {
+    return { error: result.error };
+  }
 
   logAudit({
-    userId: payment.userId,
-    action: 'payment.successful',
-    entity: 'Payment',
-    entityId: paymentId,
+    userId: trip.studentId,
+    action: 'payout.initiated',
+    entity: 'Payout',
+    entityId: result.payoutId,
     details: {
-      tripId: payment.tripId,
-      totalAmount: payment.totalAmount,
-      rideFare: payment.rideFare,
-      appCharge: payment.appCharge,
-      paystackTransactionId: paystackData.id,
+      tripId,
+      paymentId: payment.id,
+      provider: payment.provider,
+      amount: payment.rideFare,
     },
   }).catch(() => {});
+
+  return {
+    success: true,
+    payoutId: result.payoutId,
+    providerReference: result.providerReference,
+    status: result.status,
+  };
 }
 
 /**
@@ -366,6 +316,7 @@ export async function getPaymentStatus(tripId: string) {
   const payment = await prisma.payment.findFirst({
     where: { tripId, userId },
     orderBy: { createdAt: 'desc' },
+    include: { trip: true },
   });
 
   return { payment };

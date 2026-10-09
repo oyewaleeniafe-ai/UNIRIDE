@@ -19,13 +19,18 @@ const RIDE_TYPES = [
   { value: 'SHARED_SHUTTLE', label: 'Shared Shuttle', desc: 'Share with other students · ₦200 fixed', icon: Users },
 ] as const;
 
-// Display-only mirror of the server-side fixed fares (src/lib/paystack.ts is
+// Display-only mirror of the server-side fixed fares (src/lib/fares.ts is
 // the source of truth — the server recomputes the real amount on booking).
 const RIDE_FARES: Record<string, number> = {
   SOLO_QUICK_CAB: 800,
   SHARED_SHUTTLE: 200,
 };
-const SERVICE_FEE = 30;
+const SERVICE_FEE = 10; // ₦10 CampusCab platform fee (mirrors PLATFORM_FEE in fares.ts)
+
+const PAYMENT_PROVIDERS = [
+  { value: 'PALMPAY', label: 'PalmPay' },
+  { value: 'OPAY', label: 'OPay' },
+] as const;
 
 const STEPS = ['pickup', 'dropoff', 'ridetype', 'passengers', 'review'] as const;
 
@@ -95,6 +100,7 @@ export default function BookRidePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [paymentProvider, setPaymentProvider] = useState<'PALMPAY' | 'OPAY'>('PALMPAY');
   const [step, setStep] = useState<'pickup' | 'dropoff' | 'passengers' | 'ridetype' | 'review'>('pickup');
 
   const fetchLocations = useCallback(async () => {
@@ -163,9 +169,9 @@ export default function BookRidePage() {
         return;
       }
 
-      // Step 2: Initialize payment with Paystack
+      // Step 2: Initialize payment with the selected provider
       if (tripResult.trip) {
-        const paymentResult = await initializePayment(tripResult.trip.id);
+        const paymentResult = await initializePayment(tripResult.trip.id, paymentProvider);
 
         if (paymentResult.error) {
           setError(paymentResult.error);
@@ -173,11 +179,9 @@ export default function BookRidePage() {
           return;
         }
 
-        // Step 3: Redirect to Paystack checkout
-        if ('authorizationUrl' in paymentResult && paymentResult.authorizationUrl) {
-          const authUrl = paymentResult.authorizationUrl;
-          // Redirect to Paystack
-          window.location.href = authUrl;
+        // Step 3: Redirect to the provider's hosted checkout page
+        if (paymentResult.checkoutUrl) {
+          window.location.href = paymentResult.checkoutUrl;
           return;
         }
 
@@ -483,7 +487,7 @@ export default function BookRidePage() {
               <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-[var(--muted)]">Service Fee</span>
+              <span className="text-[var(--muted)]">Platform fee</span>
               <span className="font-medium text-[var(--foreground)]">₦{SERVICE_FEE}</span>
             </div>
             <div className="pt-2.5 border-t border-[var(--border-color)] flex justify-between items-center">
@@ -541,12 +545,43 @@ export default function BookRidePage() {
               <span className="font-medium text-[var(--foreground)]">₦{rideFare.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-[var(--muted)]">Service Fee</span>
+              <span className="text-[var(--muted)]">Platform fee</span>
               <span className="font-medium text-[var(--foreground)]">₦{SERVICE_FEE}</span>
             </div>
             <div className="flex justify-between pt-2.5 border-t border-[var(--border-color)] items-center">
               <span className="text-sm font-semibold text-[var(--foreground)]">Total</span>
               <span className="text-xl font-bold text-[var(--foreground)]">₦{totalAmount.toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Payment method */}
+          <div className="mt-4">
+            <span className="block text-sm font-semibold text-[var(--foreground)] mb-2">
+              Payment method
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              {PAYMENT_PROVIDERS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPaymentProvider(p.value)}
+                  aria-pressed={paymentProvider === p.value}
+                  className={`rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
+                    paymentProvider === p.value
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--foreground)]'
+                      : 'border-[var(--border-color)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--primary)]/40'
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-semibold">
+                    <span
+                      className={`inline-block h-2 w-2 rounded-full ${
+                        paymentProvider === p.value ? 'bg-[var(--primary)]' : 'bg-[var(--muted)]'
+                      }`}
+                    />
+                    {p.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -563,7 +598,10 @@ export default function BookRidePage() {
             ) : !isOnline ? (
               <span>Offline — Cannot Pay</span>
             ) : (
-              <span>Pay ₦{totalAmount.toLocaleString()} with Paystack</span>
+              <span>
+                Pay ₦{totalAmount.toLocaleString()} with{' '}
+                {paymentProvider === 'OPAY' ? 'OPay' : 'PalmPay'}
+              </span>
             )}
           </button>
 

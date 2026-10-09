@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
-        // Paystack iframe needs frame-ancestors
+        // Payment provider checkout iframe needs frame-ancestors
         source: '/api/payments/verify',
         headers: [
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },

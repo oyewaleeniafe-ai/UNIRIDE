@@ -8,7 +8,7 @@ import { logAudit, logTripStatusChange } from '@/lib/audit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { calculateFare } from '@/lib/paystack';
+import { calculateFare } from '@/lib/fares';
 
 async function getRateLimitId(): Promise<string> {
   const h = await headers();
@@ -68,7 +68,7 @@ export async function createTrip(data: {
       passengerCount: data.passengerCount,
       rideType: data.rideType,
       totalFare: fare.totalAmount,
-      appCharge: fare.appCharge,
+      appCharge: fare.platformFee,
       driverEarnings: fare.rideFare,
       status: 'PENDING',
       passengers: {
@@ -126,7 +126,7 @@ export async function createTrip(data: {
     trip,
     fare: {
       rideFare: fare.rideFare,
-      appCharge: fare.appCharge,
+      appCharge: fare.platformFee,
       totalAmount: fare.totalAmount,
     },
   };

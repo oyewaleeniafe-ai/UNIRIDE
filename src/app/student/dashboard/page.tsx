@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import CampusMap from '@/components/campus-map-lazy';
 import AuditLogViewer from './audit-log';
 import SOSButton from '@/components/sos-button';
 import ActiveRideTracker from '@/components/active-ride-tracker';
@@ -176,6 +177,27 @@ export default async function StudentDashboard() {
           </div>
         </Link>
         <SOSButton />
+      </div>
+
+      {/* Campus map — restrained secondary panel, desktop beside hero/quick actions feel,
+          mobile kept as a compact strip below the primary controls. */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-[var(--foreground)] uppercase tracking-wide">Campus Map</h2>
+          <span className="text-[11px] text-[var(--muted-fg)]">Reference only · not for navigation</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-3">
+            <CampusMap
+              height="220px"
+              markers={[]}
+            />
+          </div>
+          <div className="lg:col-span-2 cc-card rounded-2xl p-4 text-sm text-[var(--muted)] leading-relaxed">
+            <p className="font-medium text-[var(--foreground)] mb-1">Campus map view</p>
+            <p>Pan and zoom to explore campus landmarks. This is a visual reference — bookings and navigation use the campus destination selector.</p>
+          </div>
+        </div>
       </div>
 
       {/* Active Ride with Live Tracker */}
