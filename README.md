@@ -248,3 +248,6 @@ For production icons, replace the generated files with properly sized PNGs:
 ## License
 
 MIT
+
+
+<!-- vercel-redeploy-trigger -->
