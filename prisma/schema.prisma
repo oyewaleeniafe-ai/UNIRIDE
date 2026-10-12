@@ -53,10 +53,6 @@ enum PayoutStatus {
   REVERSED
 }
 
-enum PaymentProvider {
-  FLUTTERWAVE
-}
-
 // ─── Models ───────────────────────────────────────────
 
 model User {
@@ -338,7 +334,7 @@ model Payment {
   totalAmount       Float          @map("total_amount")
   currency          String         @default("NGN")
   status            PaymentStatus  @default(PENDING)
-  provider          PaymentProvider?
+  provider          String?
   providerReference String?        @map("provider_reference") @db.VarChar(255)
   providerMetadata  Json?          @map("provider_metadata")
   paidAt            DateTime?      @map("paid_at")
@@ -361,7 +357,7 @@ model Payment {
 model DriverPaymentAccount {
   id                  String   @id @default(uuid()) @db.Uuid
   driverId            String   @unique @map("driver_id") @db.Uuid
-  provider            PaymentProvider
+  provider            String
   bankCode            String?  @map("bank_code") @db.VarChar(20)
   bankName            String?  @map("bank_name") @db.VarChar(100)
   accountNumber       String?  @map("account_number") @db.VarChar(30)
@@ -380,7 +376,7 @@ model Payout {
   tripId             String        @map("trip_id") @db.Uuid
   driverId           String        @map("driver_id") @db.Uuid
   paymentId          String        @map("payment_id") @db.Uuid
-  provider           PaymentProvider
+  provider           String
   providerReference  String?       @map("provider_reference") @db.VarChar(255)
   amount             Float         @map("amount")
   status             PayoutStatus  @default(PENDING)
