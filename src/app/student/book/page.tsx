@@ -27,10 +27,6 @@ const RIDE_FARES: Record<string, number> = {
 };
 const SERVICE_FEE = 10; // ₦10 CampusCab platform fee (mirrors PLATFORM_FEE in fares.ts)
 
-const PAYMENT_PROVIDERS = [
-  { value: 'PALMPAY', label: 'PalmPay' },
-  { value: 'OPAY', label: 'OPay' },
-] as const;
 
 const STEPS = ['pickup', 'dropoff', 'ridetype', 'passengers', 'review'] as const;
 
@@ -100,7 +96,6 @@ export default function BookRidePage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [paymentProvider, setPaymentProvider] = useState<'PALMPAY' | 'OPAY'>('PALMPAY');
   const [step, setStep] = useState<'pickup' | 'dropoff' | 'passengers' | 'ridetype' | 'review'>('pickup');
 
   const fetchLocations = useCallback(async () => {
@@ -171,7 +166,7 @@ export default function BookRidePage() {
 
       // Step 2: Initialize payment with the selected provider
       if (tripResult.trip) {
-        const paymentResult = await initializePayment(tripResult.trip.id, paymentProvider);
+        const paymentResult = await initializePayment(tripResult.trip.id);
 
         if (paymentResult.error) {
           setError(paymentResult.error);
@@ -554,36 +549,6 @@ export default function BookRidePage() {
             </div>
           </div>
 
-          {/* Payment method */}
-          <div className="mt-4">
-            <span className="block text-sm font-semibold text-[var(--foreground)] mb-2">
-              Payment method
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_PROVIDERS.map((p) => (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => setPaymentProvider(p.value)}
-                  aria-pressed={paymentProvider === p.value}
-                  className={`rounded-xl border px-3 py-3 text-left text-sm transition-colors ${
-                    paymentProvider === p.value
-                      ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--foreground)]'
-                      : 'border-[var(--border-color)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--primary)]/40'
-                  }`}
-                >
-                  <span className="flex items-center gap-2 font-semibold">
-                    <span
-                      className={`inline-block h-2 w-2 rounded-full ${
-                        paymentProvider === p.value ? 'bg-[var(--primary)]' : 'bg-[var(--muted)]'
-                      }`}
-                    />
-                    {p.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <button
             onClick={handleSubmit}
@@ -599,8 +564,7 @@ export default function BookRidePage() {
               <span>Offline — Cannot Pay</span>
             ) : (
               <span>
-                Pay ₦{totalAmount.toLocaleString()} with{' '}
-                {paymentProvider === 'OPAY' ? 'OPay' : 'PalmPay'}
+                Pay ₦{totalAmount.toLocaleString()} with Flutterwave
               </span>
             )}
           </button>

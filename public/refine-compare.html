@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CampusCab — Reference vs Redesign</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0e1116; color: #e7ebf0; min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 28px 20px 60px;
+  }
+  h1 { font-size: 22px; font-weight: 700; text-align: center; letter-spacing: .2px; }
+  .sub { text-align: center; color: #9aa7b5; font-size: 13.5px; margin-top: 8px; line-height: 1.5; }
+  .sub code { background:#1a212b; padding:2px 6px; border-radius:6px; font-size:12px; }
+  .grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 22px;
+    max-width: 1500px; margin: 26px auto 0; align-items: start;
+  }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .col h2 {
+    font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+    color: #9aa7b5; margin: 0 4px 12px; position: sticky; top: 10px; z-index: 5;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .col h2 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .ref .dot { background: #f59e0b; } .app .dot { background: #2f81f7; }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .frame {
+    background: #151b24; border: 1px solid #232c38; border-radius: 16px;
+    padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .frame img { width: 100%; height: auto; display: block; border-radius: 10px; background: #0a0d11; }
+  .frame .cap { font-size: 12.5px; color: #9aa7b5; padding: 8px 4px 2px; }
+  .frame .cap b { color: #cfd8e3; font-weight: 600; }
+  .placeholder {
+    width: 100%; aspect-ratio: 9 / 16; border-radius: 10px;
+    border: 1px dashed #33404f; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px; text-align: center;
+    color: #66788c; font-size: 13px; padding: 18px; line-height: 1.5; background:#10161d;
+  }
+  .placeholder b { color:#93a4b8; font-size: 14px; }
+  .spin {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2.5px solid #2b3846; border-top-color: #2f81f7;
+    animation: r 1s linear infinite;
+  }
+  @keyframes r { to { transform: rotate(360deg); } }
+  .notes { max-width: 1500px; margin: 30px auto 0; }
+  .notes h3 { font-size: 15px; margin-bottom: 10px; }
+  .notes ul { list-style: none; display: grid; gap: 8px; }
+  .notes li { background:#151b24; border:1px solid #232c38; border-radius: 12px; padding: 10px 14px; font-size: 13.5px; color:#c3cedb; line-height: 1.5; }
+  .notes li b { color:#e7ebf0; }
+</style>
+</head>
+<body>
+  <h1>CampusCab — Reference vs Redesign</h1>
+  <p class="sub">
+    Left: the reference images from your Downloads folder. Right: the current redesign (login, student dashboard, booking, driver dashboard — light &amp; dark).
+    Screenshots are regenerated on each refresh by <code>node scripts/refine-shots.mjs</code>.
+  </p>
+
+  <div class="grid">
+    <section class="col ref">
+      <h2><span class="dot"></span>Reference</h2>
+      <div class="stack">
+        <div class="frame">
+          <img src="http://127.0.0.1:8931/campus%20cab%203.jfif" alt="Reference image 3">
+          <div class="cap"><b>campus cab 3</b> — primary visual reference</div>
+        </div>
+        <div class="frame">
+          <img src="http://127.0.0.1:8931/campus%20cab%20examples%202.jfif" alt="Reference examples 2">
+          <div class="cap"><b>campus cab examples 2</b></div>
+        </div>
+        <div class="frame">
+          <img src="http://127.0.0.1:8931/campus%20cab%20examples.jfif" alt="Reference examples 1">
+          <div class="cap"><b>campus cab examples</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="col app">
+      <h2><span class="dot"></span>CampusCab redesign (current state)</h2>
+      <div class="stack" id="shots">
+        <div class="frame">
+          <div class="placeholder"><div class="spin"></div><div><b>/refine/login-light.png</b> not generated yet</div>run: node scripts/refine-shots.mjs</div>
+          <div class="cap"><b>Login</b> — light</div>
+        </div>
+        <div class="frame">
+          <div class="placeholder"><div class="spin"></div><div><b>/refine/login-dark.png</b> not generated yet</div>run: node scripts/refine-shots.mjs</div>
+          <div class="cap"><b>Login</b> — dark</div>
+        </div>
+        <div class="frame">
+          <div class="placeholder"><div class="spin"></div><div><b>/refine/student-light.png</b> not generated yet</div>run: node scripts/refine-shots.mjs</div>
+          <div class="cap"><b>Student dashboard</b> — light</div>
+        </div>
+        <div class="frame">
+          <div class="placeholder"><div class="spin"></div><div><b>/refine/student-dark.png</b> not generated yet</div>run: node scripts/refine-shots.mjs</div>
+          <div class="cap"><b>Student dashboard</b> — dark</div>
+        </div>
+        <div class="frame">
+          <div class="placeholder"><div class="spin"></div><div><b>/refine/booking-light.png</b> not generated yet</div>run: node scripts/refine-shots.mjs</div>
+          <div class="cap"><b>Booking (ride type step)</b> — light</div>
+        </div>
+        <div class="frame">
+          <div class="placeholder"><div class="spin"></div><div><b>/refine/driver-light.png</b> not generated yet</div>run: node scripts/refine-shots.mjs</div>
+          <div class="cap"><b>Driver dashboard</b> — light</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="notes">
+    <h3>Why two extra servers are running</h3>
+    <ul>
+      <li><b>:8931</b> → serves <b>Downloads</b> read-only so the reference images above can be viewed in the browser panel (this environment never delivered the images in-chat).</li>
+      <li><b>:8932</b> → serves <b>campus-cab-app/public</b> statically so the <code>/refine/*.png</code> screenshots can be embedded here without touching the Next.js dev server.</li>
+    </ul>
+  </div>
+</body>
+</html>

@@ -1,27 +1,23 @@
 /**
  * CampusCab payment service facade.
  *
- * This is the only module most of the app should import for provider-backed
- * payment operations. It delegates to PalmPay or OPay internally and keeps
- * provider-specific details out of the rest of the codebase.
+ * CampusCab uses Flutterwave as the only payment provider. This is the only
+ * module most of the app should import for provider-backed payment operations.
+ *
+ * Payment amounts are never trusted from the client — they are recalculated
+ * server-side from the trip's stored ride type before initialization or
+ * verification.
  */
 
 import { prisma } from '@/lib/prisma';
 import { logAudit } from '@/lib/audit';
 import {
-  createPayment as createPalmPayPayment,
-  verifyPayment as verifyPalmPayPayment,
-  verifyWebhookSignature as verifyPalmPaySignature,
-  normalizeWebhookEvent as normalizePalmPayEvent,
-  createPayout as createPalmPayPayout,
-} from './palmpay';
-import {
-  createPayment as createOpayPayment,
-  verifyPayment as verifyOpayPayment,
-  verifyWebhookSignature as verifyOpaySignature,
-  normalizeWebhookEvent as normalizeOpayEvent,
-  createPayout as createOpayPayout,
-} from './opay';
+  createPayment as createFlutterwavePayment,
+  verifyPayment as verifyFlutterwavePayment,
+  verifyWebhookSignature as verifyFlutterwaveSignature,
+  normalizeWebhookEvent as normalizeFlutterwaveEvent,
+  createPayout as createFlutterwavePayout,
+} from './flutterwave';
 import type {
   Provider,
   PayoutRecipient,
@@ -30,49 +26,33 @@ import type {
 } from './types';
 
 export type { Provider } from './types';
-export {
-  maskAccountNumber,
-  PALMPAY_WEBHOOK_HEADER,
-  OPAY_WEBHOOK_HEADER,
-} from './types';
-
-function providerModule(provider: Provider) {
-  if (provider === 'PALMPAY') {
-    return {
-      createPayment: createPalmPayPayment,
-      verifyPayment: verifyPalmPayPayment,
-      verifyWebhookSignature: verifyPalmPaySignature,
-      normalizeWebhookEvent: normalizePalmPayEvent,
-      createPayout: createPalmPayPayout,
-    };
-  }
-  return {
-    createPayment: createOpayPayment,
-    verifyPayment: verifyOpayPayment,
-    verifyWebhookSignature: verifyOpaySignature,
-    normalizeWebhookEvent: normalizeOpayEvent,
-    createPayout: createOpayPayout,
-  };
-}
+export { maskAccountNumber, FLUTTERWAVE_WEBHOOK_HEADER } from './types';
 
 /**
- * Build the amount in the provider's smallest currency unit (kobo).
- * CampusCab amounts are stored in NGN; providers expect integer kobo.
+ * Build the amount in Flutterwave's smallest currency unit (kobo).
+ * CampusCab amounts are stored in NGN; Flutterwave expects integer kobo for
+ * payment init/verify. Transfers use NGN units (not kobo), handled in the adapter.
  */
 export function toProviderAmount(naira: number): number {
   return Math.round(naira * 100);
 }
 
 /**
- * Create a CampusCab payment via the selected provider.
+ * Every payment must use the Flutterwave provider. The provider value is still
+ * stored on the Payment record so historical data and any future provider work
+ * stays compatible, but CampusCab currently only supports FLUTTERWAVE.
+ */
+export const DEFAULT_PROVIDER: Provider = 'FLUTTERWAVE';
+
+/**
+ * Create a CampusCab payment via Flutterwave.
  *
- * This also persists a Payment record so the webhook and verify flows can be
+ * Persists a Payment record first so the webhook and verify flows can be
  * idempotent and tamper-protected.
  */
 export async function createPayment({
   tripId,
   userId,
-  provider,
   passengerCount,
   rideFare,
   platformFee,
@@ -81,7 +61,6 @@ export async function createPayment({
 }: {
   tripId: string;
   userId: string;
-  provider: Provider;
   passengerCount: number;
   rideFare: number;
   platformFee: number;
@@ -103,22 +82,44 @@ export async function createPayment({
   }
 
   const reference = `ccab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const amountInSmallestUnit = toProviderAmount(totalAmount);
+  const amountInKobo = toProviderAmount(totalAmount);
 
-  const payment = await prisma.payment.create({
-    data: {
-      userId,
-      tripId,
-      reference,
-      passengerCount,
-      rideFare,
-      platformFee,
-      totalAmount,
-      currency: 'NGN',
-      status: 'PENDING',
-      provider,
-    },
+  // Reuse any pending row for this trip instead of creating a duplicate
+  // payment record. A fresh reference is issued for the new checkout attempt.
+  const pending = await prisma.payment.findFirst({
+    where: { tripId, userId, status: 'PENDING' },
+    orderBy: { createdAt: 'desc' },
   });
+
+  const payment = pending
+    ? await prisma.payment.update({
+        where: { id: pending.id },
+        data: {
+          reference,
+          passengerCount,
+          rideFare,
+          platformFee,
+          totalAmount,
+          currency: 'NGN',
+          provider: 'FLUTTERWAVE',
+          providerReference: null,
+          failureReason: null,
+        },
+      })
+    : await prisma.payment.create({
+        data: {
+          userId,
+          tripId,
+          reference,
+          passengerCount,
+          rideFare,
+          platformFee,
+          totalAmount,
+          currency: 'NGN',
+          status: 'PENDING',
+          provider: 'FLUTTERWAVE',
+        },
+      });
 
   logAudit({
     userId,
@@ -131,15 +132,15 @@ export async function createPayment({
       rideFare,
       platformFee,
       totalAmount,
-      provider,
+      provider: 'FLUTTERWAVE',
       reference,
     },
   }).catch(() => {});
 
-  const providerResult = await providerModule(provider).createPayment({
-    provider,
+  const providerResult = await createFlutterwavePayment({
+    provider: 'FLUTTERWAVE',
     email,
-    amountInSmallestUnit,
+    amountInSmallestUnit: amountInKobo,
     reference,
     metadata: {
       tripId,
@@ -181,10 +182,12 @@ export async function createPayment({
 }
 
 /**
- * Verify a CampusCab payment with the selected provider.
+ * Verify a CampusCab payment with Flutterwave.
  * Server-side authoritative check — never trusts frontend callbacks alone.
  */
-export async function verifyPayment(reference: string, provider: Provider) {
+export async function verifyPayment(reference: string) {
+  // Payment records may have a providerReference from the checkout init, but
+  // Flutterwave verification is done by tx_ref (our internal reference).
   const payment = await prisma.payment.findUnique({ where: { reference } });
 
   if (!payment) {
@@ -194,7 +197,7 @@ export async function verifyPayment(reference: string, provider: Provider) {
     return { success: true as const, alreadyVerified: true as const };
   }
 
-  const providerResult = await providerModule(provider).verifyPayment(
+  const providerResult = await verifyFlutterwavePayment(
     payment.providerReference ?? reference
   );
 
@@ -203,6 +206,36 @@ export async function verifyPayment(reference: string, provider: Provider) {
   }
 
   if (providerResult.status === 'successful') {
+    // Validate amount and currency before confirming — never trust the
+    // provider response alone against our server-calculated fare.
+    const currencyOk = !providerResult.currency || providerResult.currency === 'NGN';
+    const amountOk =
+      providerResult.amount == null ||
+      Math.abs(providerResult.amount - payment.totalAmount) <= 0.01;
+
+    if (!currencyOk || !amountOk) {
+      const reason = !currencyOk
+        ? `Currency mismatch: expected NGN, got ${providerResult.currency}`
+        : `Amount mismatch: expected ${payment.totalAmount} NGN, got ${providerResult.amount}`;
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: 'FAILED', failureReason: reason },
+      });
+      logAudit({
+        userId: payment.userId,
+        action: 'payment.amount_mismatch',
+        entity: 'Payment',
+        entityId: payment.id,
+        details: {
+          expected: payment.totalAmount,
+          received: providerResult.amount,
+          currency: providerResult.currency,
+          source: 'verify',
+        },
+      }).catch(() => {});
+      return { success: false as const, error: reason };
+    }
+
     await prisma.$transaction([
       prisma.payment.update({
         where: { id: payment.id },
@@ -253,42 +286,90 @@ export async function verifyPayment(reference: string, provider: Provider) {
 }
 
 /**
- * Handle an incoming webhook from the selected provider.
+ * Handle an incoming Flutterwave webhook.
  * Idempotent and tamper-protected. Returns true only if the event was processed.
  */
-export async function handleWebhookProvider(provider: Provider, event: WebhookEvent): Promise<boolean> {
-  const adapter = providerModule(provider);
-  if (!adapter.verifyWebhookSignature(event.rawBody, event.signatureHeader ?? null)) {
+export async function handleWebhookProvider(event: WebhookEvent): Promise<boolean> {
+  // Flutterwave sends the secret hash in the verif-hash header. Reject anything
+  // without a valid signature before parsing or acting on the payload.
+  if (!verifyFlutterwaveSignature(event.rawBody, event.signatureHeader ?? null)) {
     return false;
   }
 
-  // Parse provider webhook payload generically.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload = JSON.parse(event.rawBody) as any;
-  const providerReference = String(payload.outOrderId ?? payload.order_no ?? payload.orderId ?? payload.reference ?? '');
+  // Flutterwave nests tx_ref under `data`; keep top-level fallbacks for
+  // compatibility with other event shapes.
+  const eventData = (payload.data ?? {}) as Record<string, unknown>;
+  const providerReference = String(
+    eventData.tx_ref ??
+      payload.tx_ref ??
+      payload.outOrderId ??
+      payload.order_no ??
+      payload.orderId ??
+      payload.reference ??
+      ''
+  );
 
   const payment = await prisma.payment.findFirst({
-    where: { providerReference, provider },
+    where: { OR: [{ providerReference }, { reference: providerReference }] },
     orderBy: { createdAt: 'desc' },
   });
 
+  // Unknown reference — acknowledge so Flutterwave stops retrying, but do not
+  // act on it.
   if (!payment) {
-    return true; // acknowledge unknown events so provider stops retrying
+    return true;
   }
 
+  // Idempotent: already confirmed, nothing to do.
   if (payment.status === 'SUCCESSFUL') {
-    return true; // idempotent
+    return true;
   }
 
-  const normalized = adapter.normalizeWebhookEvent(providerReference, payload);
+  const normalized = normalizeFlutterwaveEvent(providerReference, payload);
 
+  // Webhook events are never trusted on their own. Re-verify against Flutterwave
+  // before updating state.
   if (normalized.status === 'successful') {
+    const verification = await verifyFlutterwavePayment(providerReference);
+
+    if (verification.status !== 'successful' || verification.error) {
+      // Premature/stale event; let the callback and future retries handle it.
+      return true;
+    }
+
+    // Tamper protection: the verified amount/currency must match our
+    // server-calculated fare, and our stored record must be NGN. We never
+    // trust amounts coming from the webhook payload alone.
+    const currencyOk =
+      payment.currency === 'NGN' &&
+      (!verification.currency || verification.currency === 'NGN');
+    const amountOk =
+      verification.amount == null ||
+      Math.abs(verification.amount - payment.totalAmount) <= 0.01;
+    if (!currencyOk || !amountOk) {
+      logAudit({
+        userId: payment.userId,
+        action: 'payment.amount_mismatch',
+        entity: 'Payment',
+        entityId: payment.id,
+        details: {
+          expected: payment.totalAmount,
+          received: verification.amount,
+          currency: verification.currency,
+          source: 'webhook',
+        },
+      }).catch(() => {});
+      return true;
+    }
+
     const updated = await prisma.payment.updateMany({
       where: { id: payment.id, status: { not: 'SUCCESSFUL' } },
       data: {
         status: 'SUCCESSFUL',
-        providerReference: normalized.providerReference ?? payment.providerReference,
-        paidAt: new Date(normalized.paidAt ?? Date.now()),
+        providerReference: verification.providerReference ?? payment.providerReference,
+        paidAt: new Date(verification.paidAt ?? Date.now()),
       },
     });
 
@@ -311,7 +392,7 @@ export async function handleWebhookProvider(provider: Provider, event: WebhookEv
           totalAmount: payment.totalAmount,
           rideFare: payment.rideFare,
           platformFee: payment.platformFee,
-          providerReference: normalized.providerReference,
+          providerReference: verification.providerReference,
           source: 'webhook',
         },
       }).catch(() => {});
@@ -331,41 +412,55 @@ export async function handleWebhookProvider(provider: Provider, event: WebhookEv
     return true;
   }
 
-  return true; // acknowledge pending/other events
+  // pending/other events: acknowledge so Flutterwave stops retrying.
+  return true;
 }
 
 /**
  * Initiate a driver payout for a completed trip.
  *
  * Payout requires a matching Payment and trip driver. If the driver has a
- * provider-specific recipient ID, it is preferred.
+ * Flutterwave bank account on file, it is preferred. Payouts are not automatic:
+ * they require FLUTTERWAVE_TRANSFERS_ENABLED=1 on the merchant dashboard.
  */
 export async function createPayoutForTrip({
   tripId,
   paymentId,
-  provider,
 }: {
   tripId: string;
   paymentId: string;
-  provider: Provider;
-}): Promise<PayoutResult & { payoutId?: string }> {
+}): Promise<PayoutResult & { payoutId?: string; provider: Provider }> {
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
     include: { driver: { include: { user: true } } },
   });
 
   if (!trip?.driver) {
-    return { error: 'Trip has no assigned driver' };
+    return { error: 'Trip has no assigned driver', provider: 'FLUTTERWAVE' };
   }
 
   const driverDbId = trip.driverId;
   if (!driverDbId) {
-    return { error: 'Trip has no assigned driver' };
+    return { error: 'Trip has no assigned driver', provider: 'FLUTTERWAVE' };
   }
 
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment) {
-    return { error: 'Payment not found' };
+    return { error: 'Payment not found', provider: 'FLUTTERWAVE' };
+  }
+
+  // Prevent duplicate transfers: only allow a retry when the previous payout
+  // attempt failed (or was reversed).
+  const existingPayout = await prisma.payout.findFirst({
+    where: { tripId, status: { in: ['PENDING', 'PROCESSING', 'SUCCESS'] } },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (existingPayout) {
+    return {
+      error: 'A payout for this trip already exists and has not failed.',
+      provider: 'FLUTTERWAVE',
+      payoutId: existingPayout.id,
+    };
   }
 
   const driverAccount = await prisma.driverPaymentAccount.findUnique({
@@ -375,7 +470,6 @@ export async function createPayoutForTrip({
   const recipient: PayoutRecipient = {
     name: (trip.driver.user?.name ?? 'Driver').toString(),
     phone: trip.driver.user?.phone ?? undefined,
-    providerRecipientId: driverAccount?.providerRecipientId ?? undefined,
     bankCode: driverAccount?.bankCode ?? undefined,
     bankName: driverAccount?.bankName ?? undefined,
     accountNumber: driverAccount?.accountNumber ?? undefined,
@@ -383,23 +477,22 @@ export async function createPayoutForTrip({
   };
 
   const payoutReference = `ccab-payout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  const amountInSmallestUnit = toProviderAmount(payment.rideFare);
 
   const payout = await prisma.payout.create({
     data: {
       tripId,
       driverId: driverDbId,
       paymentId,
-      provider,
+      provider: 'FLUTTERWAVE',
       amount: payment.rideFare,
       status: 'PENDING',
     },
   });
 
-  const providerResult = await providerModule(provider).createPayout({
-    provider,
+  const providerResult = await createFlutterwavePayout({
+    provider: 'FLUTTERWAVE',
     driverId: driverDbId,
-    amountInSmallestUnit,
+    amountInSmallestUnit: toProviderAmount(payment.rideFare),
     recipient,
     reference: payoutReference,
   });
@@ -412,24 +505,27 @@ export async function createPayoutForTrip({
         failureReason: providerResult.error,
       },
     });
-    return { error: providerResult.error, payoutId: payout.id };
+    return { error: providerResult.error, payoutId: payout.id, provider: 'FLUTTERWAVE' };
   }
 
   const providerRef = providerResult.providerReference ?? payoutReference;
+  const payoutStatus: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED' =
+    providerResult.status === 'success'
+      ? 'SUCCESS'
+      : providerResult.status === 'failed'
+        ? 'FAILED'
+        : providerResult.status === 'processing' || providerResult.status === 'pending'
+          ? 'PROCESSING'
+          : 'PROCESSING';
 
   await prisma.payout.update({
     where: { id: payout.id },
     data: {
       providerReference: providerRef,
-      status:
-        providerResult.status === 'success'
-          ? 'SUCCESS'
-          : providerResult.status === 'failed'
-            ? 'FAILED'
-            : 'PROCESSING',
+      status: payoutStatus,
       initiatedAt: new Date(),
     },
   });
 
-  return { providerReference: providerRef, status: 'processing', payoutId: payout.id };
+  return { providerReference: providerRef, status: payoutStatus, payoutId: payout.id, provider: 'FLUTTERWAVE' };
 }

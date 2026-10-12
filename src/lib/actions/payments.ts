@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { calculateFare } from '@/lib/fares';
-import { createPayment, verifyPayment, createPayoutForTrip, type Provider } from '@/lib/payments';
+import { createPayment, verifyPayment, createPayoutForTrip } from '@/lib/payments';
 import { logAudit } from '@/lib/audit';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
@@ -19,16 +19,13 @@ async function getRateLimitId(): Promise<string> {
 }
 
 /**
- * Initialize a payment for a trip using the student's selected provider.
+ * Initialize a payment for a trip via Flutterwave.
  *
- * The provider selection is part of the booking/payment flow now. If the
- * frontend does not pass a provider, default to PalmPay as the primary
- * provider. The backend still calculates the amount — it never trusts the
- * frontend's amount.
+ * Server calculates the fare from the trip's stored ride type — it never
+ * trusts the frontend's amount. CampusCab only supports Flutterwave.
  */
 export async function initializePayment(
-  tripId: string,
-  provider: Provider | 'PALMPAY' | 'OPAY' = 'PALMPAY'
+  tripId: string
 ): Promise<{
   success?: boolean;
   error?: string;
@@ -70,10 +67,7 @@ export async function initializePayment(
     return { error: 'This trip is no longer accepting payments.' };
   }
 
-  if (
-    trip.rideType !== 'SOLO_QUICK_CAB' &&
-    trip.rideType !== 'SHARED_SHUTTLE'
-  ) {
+  if (trip.rideType !== 'SOLO_QUICK_CAB' && trip.rideType !== 'SHARED_SHUTTLE') {
     return { error: 'Invalid ride type on this trip.' };
   }
 
@@ -88,90 +82,15 @@ export async function initializePayment(
     };
   }
 
-  const pendingPayment = await prisma.payment.findFirst({
-    where: { tripId, userId, status: 'PENDING' },
-  });
-
-  // The Trip model does not store a provider preference, so the provider is
-  // always the student's explicit selection from the booking flow. Pending
-  // payments are re-routed to that same provider on retry.
-  const effectiveProvider: Provider =
-    provider === 'PALMPAY' || provider === 'OPAY' ? provider : 'PALMPAY';
-
-  if (pendingPayment) {
-    const fare = calculateFare(trip.rideType);
-    await prisma.payment.update({
-      where: { id: pendingPayment.id },
-      data: {
-        rideFare: fare.rideFare,
-        platformFee: fare.platformFee,
-        totalAmount: fare.totalAmount,
-        provider: effectiveProvider,
-      },
-    });
-
-    const providerResult = await verifyPayment(
-      pendingPayment.reference,
-      effectiveProvider
-    );
-
-    if (providerResult.success && providerResult.alreadyVerified) {
-      return {
-        error: 'This trip has already been paid for.',
-        providerReference: pendingPayment.providerReference,
-        paymentId: pendingPayment.id,
-      };
-    }
-
-    return createPayment({
-      tripId: pendingPayment.tripId,
-      userId: pendingPayment.userId,
-      provider: effectiveProvider,
-      passengerCount: pendingPayment.passengerCount,
-      rideFare: fare.rideFare,
-      platformFee: fare.platformFee,
-      totalAmount: fare.totalAmount,
-      email: session.user.email || '',
-    });
-  }
-
   const fare = calculateFare(trip.rideType);
 
-  const payment = await prisma.payment.create({
-    data: {
-      userId,
-      tripId,
-      reference: `ccab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-      passengerCount: trip.passengerCount,
-      rideFare: fare.rideFare,
-      platformFee: fare.platformFee,
-      totalAmount: fare.totalAmount,
-      currency: 'NGN',
-      status: 'PENDING',
-      provider: effectiveProvider,
-    },
-  });
-
-  logAudit({
-    userId,
-    action: 'payment.initialized',
-    entity: 'Payment',
-    entityId: payment.id,
-    details: {
-      tripId,
-      passengerCount: trip.passengerCount,
-      rideFare: fare.rideFare,
-      platformFee: fare.platformFee,
-      totalAmount: fare.totalAmount,
-      provider: effectiveProvider,
-    },
-  }).catch(() => {});
-
+  // The Payment row (including reuse of any pending row for this trip) is
+  // persisted inside createPayment in the payment facade — one authoritative
+  // record per initialization, so no duplicate payment rows are created.
   return createPayment({
-    tripId: payment.tripId,
-    userId: payment.userId,
-    provider: effectiveProvider,
-    passengerCount: payment.passengerCount,
+    tripId,
+    userId,
+    passengerCount: trip.passengerCount,
     rideFare: fare.rideFare,
     platformFee: fare.platformFee,
     totalAmount: fare.totalAmount,
@@ -179,10 +98,8 @@ export async function initializePayment(
   });
 }
 
-
-
 /**
- * Verify a payment after the provider callback.
+ * Verify a payment after the Flutterwave callback.
  * Server-side verification — never trusts the frontend alone.
  */
 export async function verifyPaymentHandler(reference: string) {
@@ -219,7 +136,7 @@ export async function verifyPaymentHandler(reference: string) {
     };
   }
 
-  const providerResult = await verifyPayment(reference, payment.provider as Provider);
+  const providerResult = await verifyPayment(reference);
 
   if (providerResult.success) {
     return {
@@ -235,7 +152,10 @@ export async function verifyPaymentHandler(reference: string) {
 
 /**
  * Initiate a driver payout for a completed trip.
- * Used by driver/admin flows once payouts are approved for the merchant account.
+ *
+ * Only drivers and admins may initiate payouts, and only for trips with a
+ * successful payment on file. Payouts are not automatic — they require
+ * FLUTTERWAVE_TRANSFERS_ENABLED=1 on the Flutterwave dashboard.
  */
 export async function initiateDriverPayout(tripId: string) {
   const rateLimitId = await getRateLimitId();
@@ -252,6 +172,10 @@ export async function initiateDriverPayout(tripId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userRole = (session.user as any).role;
 
+  if (userRole !== 'DRIVER' && userRole !== 'ADMIN') {
+    return { error: 'Only drivers and admins can initiate payouts.' };
+  }
+
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
     include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
@@ -261,19 +185,33 @@ export async function initiateDriverPayout(tripId: string) {
     return { error: 'Trip not found.' };
   }
 
+  if (!trip.driverId) {
+    return { error: 'This trip has no assigned driver.' };
+  }
+
+  // Only the assigned driver or admin can initiate the payout.
+  // trip.driverId is the Driver record id (relation target), not the user id.
+  const driver = await prisma.driver.findUnique({ where: { id: trip.driverId } });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isAssignedDriver = driver?.userId === (session?.user as any)?.id;
+
+  if (!isAssignedDriver && userRole !== 'ADMIN') {
+    return { error: 'You can only initiate payouts for your own trips.' };
+  }
+
   const payment = trip.payments[0];
   if (!payment || payment.status !== 'SUCCESSFUL') {
     return { error: 'No successful payment found for this trip.' };
   }
 
-  if (userRole !== 'STUDENT' && userRole !== 'DRIVER' && userRole !== 'ADMIN') {
-    return { error: 'You are not authorized to initiate payouts.' };
+  // Guard: do not trigger payouts for unpaid/cancelled trips.
+  if (trip.status !== 'COMPLETED') {
+    return { error: 'This trip is not completed. Payouts require a completed trip.' };
   }
 
   const result = await createPayoutForTrip({
     tripId,
     paymentId: payment.id,
-    provider: payment.provider as Provider,
   });
 
   if (result.error) {
@@ -288,7 +226,7 @@ export async function initiateDriverPayout(tripId: string) {
     details: {
       tripId,
       paymentId: payment.id,
-      provider: payment.provider,
+      provider: 'FLUTTERWAVE',
       amount: payment.rideFare,
     },
   }).catch(() => {});

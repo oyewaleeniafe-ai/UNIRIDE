@@ -54,8 +54,7 @@ enum PayoutStatus {
 }
 
 enum PaymentProvider {
-  PALMPAY
-  OPAY
+  FLUTTERWAVE
 }
 
 // ─── Models ───────────────────────────────────────────

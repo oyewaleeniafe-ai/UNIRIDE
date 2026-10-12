@@ -4,18 +4,18 @@ import { verifyPayment } from '@/lib/payments';
 import { logAudit } from '@/lib/audit';
 
 /**
- * Payment callback route.
+ * Flutterwave Standard checkout callback route.
  *
- * Used by both PalmPay and OPay after the student completes (or cancels) the
- * checkout flow. We verify the payment server-side using the provider record
- * attached to the payment, never trusting the frontend callback alone.
+ * After the student completes (or cancels) checkout, Flutterwave redirects
+ * here with status/tx_ref/transaction_id query parameters. We verify the
+ * payment server-side using tx_ref, never trusting the frontend redirect alone.
  *
  * Redirects:
  *  /student/rides?payment=success
  *  /student/rides?payment=failed
+ *  /student/rides?payment=pending
  *  /student/rides?payment=error&reason=...
  */
-
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const reference = searchParams.get('reference');
@@ -41,10 +41,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const provider = (payment.provider ?? 'PALMPAY') as 'PALMPAY' | 'OPAY';
-    const providerRef = payment.providerReference ?? reference;
-
-    const result = await verifyPayment(providerRef, provider);
+    // Verify with Flutterwave server-side using tx_ref.
+    const result = await verifyPayment(reference);
 
     if (result.success) {
       return NextResponse.redirect(
@@ -70,3 +68,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

@@ -30,6 +30,7 @@ model User {
   passwordHintAnswer    String?
   passwordResetTokens PasswordResetToken[]
   auditLogs        AuditLog[]
+  payments         Payment[]
 }
 
 model Student {
@@ -55,6 +56,7 @@ model Driver {
   inspections     VehicleInspection[]
   assignedTrips   Trip[]
   ratings         Rating[]
+  paymentAccount  DriverPaymentAccount?
 }
 
 model Vehicle {
@@ -87,6 +89,9 @@ model Trip {
   rideType          String      @default("SOLO_QUICK_CAB")
   passengerCount    Int
   totalFare         Float
+  appCharge         Float       @default(10)
+  driverPayoutAmount Float      @default(0)
+  driverEarnings    Float       @default(0)
   status            String      @default("PENDING")
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -99,6 +104,7 @@ model Trip {
   statusHistory   RideStatusHistory[]
   ratings         Rating[]
   safetyAlerts    SafetyAlert[]
+  payments        Payment[]
 
   @@index([status])
   @@index([driverId])
@@ -230,4 +236,68 @@ model PasswordResetToken {
 
   @@index([token])
   @@index([userId])
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  userId            String
+  tripId            String
+  reference         String   @unique
+  passengerCount    Int
+  rideFare          Float
+  platformFee       Float
+  totalAmount       Float
+  currency          String   @default("NGN")
+  status            String   @default("PENDING")
+  provider          String?
+  providerReference String?
+  providerMetadata  String?
+  paidAt            DateTime?
+  failureReason     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip    Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  payouts Payout[]
+
+  @@index([tripId])
+  @@index([status])
+}
+
+model DriverPaymentAccount {
+  id                  String   @id @default(uuid())
+  driverId            String   @unique
+  provider            String
+  bankCode            String?
+  bankName            String?
+  accountNumber       String?
+  accountName         String?
+  providerRecipientId String?
+  verificationStatus  String   @default("PENDING")
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  driver Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+}
+
+model Payout {
+  id                String   @id @default(uuid())
+  tripId            String
+  driverId          String
+  paymentId         String
+  provider          String
+  providerReference String?
+  amount            Float
+  status            String   @default("PENDING")
+  failureReason     String?
+  initiatedAt       DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([status])
 }

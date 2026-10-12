@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Cab — Project Documentation</title>
+  <style>
+    @media print {
+      body { font-size: 11pt; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none; }
+      h1, h2, h3 { page-break-after: avoid; }
+      table, figure { page-break-inside: avoid; }
+    }
+
+    :root {
+      --primary: #1a56db;
+      --primary-light: #e8f0fe;
+      --danger: #dc3545;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: var(--gray-900);
+      line-height: 1.6;
+      background: white;
+    }
+
+    .cover {
+      background: linear-gradient(135deg, var(--primary), #2563eb, #3b82f6);
+      color: white;
+      padding: 80px 40px;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .cover h1 {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .cover .subtitle {
+      font-size: 20px;
+      opacity: 0.9;
+      margin-bottom: 40px;
+    }
+
+    .cover .meta {
+      font-size: 14px;
+      opacity: 0.7;
+      margin-top: 40px;
+    }
+
+    .cover .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin: 48px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 3px solid var(--primary);
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin: 32px 0 12px;
+    }
+
+    h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin: 24px 0 8px;
+    }
+
+    p {
+      margin: 0 0 12px;
+      color: var(--gray-700);
+      font-size: 15px;
+    }
+
+    .lead {
+      font-size: 17px;
+      color: var(--gray-500);
+      margin-bottom: 32px;
+    }
+
+    ul, ol {
+      margin: 0 0 16px 24px;
+      color: var(--gray-700);
+      font-size: 15px;
+    }
+
+    li { margin-bottom: 6px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--gray-100);
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+    }
+
+    td {
+      padding: 10px 14px;
+      border: 1px solid var(--gray-200);
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) { background: var(--gray-50); }
+
+    code {
+      background: var(--gray-100);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+    }
+
+    pre {
+      background: var(--gray-900);
+      color: #e5e7eb;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 12px 0 20px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout-info {
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+    }
+
+    .callout-success {
+      background: #f0fdf4;
+      border-left: 4px solid var(--success);
+    }
+
+    .callout-warning {
+      background: #fffbeb;
+      border-left: 4px solid var(--warning);
+    }
+
+    .callout-danger {
+      background: #fef2f2;
+      border-left: 4px solid var(--danger);
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 16px 0 24px;
+    }
+
+    .tech-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .tech-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--gray-500);
+      font-weight: 600;
+    }
+
+    .tech-card .value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-top: 4px;
+    }
+
+    .flow-diagram {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 16px 0 24px;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .section-number {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .toc {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 24px 32px;
+      margin: 24px 0;
+    }
+
+    .toc h3 {
+      margin-top: 0;
+    }
+
+    .toc ol {
+      margin-bottom: 0;
+    }
+
+    .toc li {
+      margin-bottom: 4px;
+    }
+
+    .toc a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .toc a:hover {
+      text-decoration: underline;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--gray-500);
+      font-size: 13px;
+      border-top: 1px solid var(--gray-200);
+      margin-top: 60px;
+    }
+
+    .download-btn {
+      display: inline-block;
+      background: white;
+      color: var(--primary);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      margin-top: 24px;
+      font-size: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+
+    .download-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ COVER ═══════════════════════════════════════════ -->
+<div class="cover">
+  <div class="badge">📄 Technical Documentation</div>
+  <h1>Campus Cab</h1>
+  <p class="subtitle">University Ride-Hailing Platform</p>
+  <p style="max-width: 500px; opacity: 0.85; font-size: 15px; line-height: 1.6;">
+    A comprehensive guide covering architecture, tech stack, features, database design, authentication, safety systems, and deployment of the Campus Cab application.
+  </p>
+  <a href="javascript:window.print()" class="download-btn">📥 Download / Print as PDF</a>
+  <p class="meta">Version 1.0 &nbsp;·&nbsp; Built by Veltrix &nbsp;·&nbsp; campuscab-pi.vercel.app</p>
+</div>
+
+<!-- ═══════════════════════════════════════════ TOC ═══════════════════════════════════════════ -->
+<div class="container">
+
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ol>
+    <li><a href="#overview">Project Overview</a></li>
+    <li><a href="#tech-stack">Technology Stack</a></li>
+    <li><a href="#architecture">Architecture &amp; Directory Structure</a></li>
+    <li><a href="#database">Database Schema &amp; Models</a></li>
+    <li><a href="#authentication">Authentication System</a></li>
+    <li><a href="#password-recovery">Password Recovery (Hint-Based)</a></li>
+    <li><a href="#ride-booking">Ride Booking &amp; Trip Lifecycle</a></li>
+    <li><a href="#driver-system">Driver System</a></li>
+    <li><a href="#safety">Safety Features (SOS)</a></li>
+    <li><a href="#notifications">Notifications &amp; Email</a></li>
+    <li><a href="#security">Security &amp; Rate Limiting</a></li>
+    <li><a href="#audit">Audit Logging</a></li>
+    <li><a href="#testing">Testing</a></li>
+    <li><a href="#mobile">Mobile (Capacitor)</a></li>
+    <li><a href="#deployment">Deployment</a></li>
+    <li><a href="#env">Environment Variables</a></li>
+    <li><a href="#future">Future Enhancements</a></li>
+  </ol>
+</div>
+
+<!-- ═══════════════════════════════════════════ 1. OVERVIEW ═══════════════════════════════════════════ -->
+<h2 id="overview"><span class="section-number">1.</span> Project Overview</h2>
+
+<p>Campus Cab is a full-stack university ride-hailing platform that connects students with campus drivers. It supports two user roles — <strong>Students</strong> (who book rides) and <strong>Drivers</strong> (who accept and fulfill rides) — with real-time status tracking, email notifications, a safety SOS system, vehicle inspections, and a rating system.</p>
+
+<h3>Core Value Proposition</h3>
+<ul>
+  <li><strong>Zero platform fees</strong> — 100% of the fare goes directly to the driver</li>
+  <li><strong>Campus-focused</strong> — designed specifically for university campuses with predefined locations</li>
+  <li><strong>Safety-first</strong> — SOS button with GPS tracking, email alerts, and audit logging</li>
+  <li><strong>Student-built</strong> — by students, for students</li>
+</ul>
+
+<h3>Live URL</h3>
+<p><a href="https://campuscab-pi.vercel.app">https://campuscab-pi.vercel.app</a></p>
+
+<h3>Key Stats</h3>
+<div class="tech-grid">
+  <div class="tech-card"><div class="label">Campus Locations</div><div class="value">4</div></div>
+  <div class="tech-card"><div class="label">Availability</div><div class="value">24/7</div></div>
+  <div class="tech-card"><div class="label">Platform Fees</div><div class="value">₦0</div></div>
+  <div class="tech-card"><div class="label">Driver Earnings</div><div class="value">100%</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════ 2. TECH STACK ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="tech-stack"><span class="section-number">2.</span> Technology Stack</h2>
+
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th></tr>
+  <tr><td><strong>Framework</strong></td><td>Next.js</td><td>16.3.3</td><td>Full-stack React framework with App Router, Server Components, and Server Actions</td></tr>
+  <tr><td><strong>Language</strong></td><td>TypeScript</td><td>5.x</td><td>End-to-end type safety</td></tr>
+  <tr><td><strong>UI Library</strong></td><td>React</td><td>19.2.8</td><td>Component-based UI with Server Components</td></tr>
+  <tr><td><strong>Styling</strong></td><td>Tailwind CSS</td><td>4.x</td><td>Utility-first CSS with CSS variables for theming</td></tr>
+  <tr><td><strong>Database</strong></td><td>PostgreSQL (via Prisma)</td><td>5.22</td><td>Relational database with typed ORM</td></tr>
+  <tr><td><strong>ORM</strong></td><td>Prisma</td><td>5.22</td><td>Database schema, migrations, and queries</td></tr>
+  <tr><td><strong>Authentication</strong></td><td>NextAuth.js v5</td><td>5.0.0-beta.32</td><td>Session-based auth with JWT tokens</td></tr>
+  <tr><td><strong>Validation</strong></td><td>Zod</td><td>4.4.3</td><td>Schema validation for all inputs (client + server)</td></tr>
+  <tr><td><strong>Password Hashing</strong></td><td>bcryptjs</td><td>3.0.3</td><td>Secure password hashing (12 salt rounds)</td></tr>
+  <tr><td><strong>Email</strong></td><td>Resend</td><td>6.24</td><td>Transactional email delivery</td></tr>
+  <tr><td><strong>Testing</strong></td><td>Vitest</td><td>4.1.11</td><td>Unit and integration testing</td></tr>
+  <tr><td><strong>Mobile</strong></td><td>Capacitor</td><td>8.5</td><td>Native iOS/Android from web codebase</td></tr>
+  <tr><td><strong>Hosting</strong></td><td>Vercel</td><td>—</td><td>Serverless deployment with edge functions</td></tr>
+</table>
+
+<h3>Why These Choices?</h3>
+<ul>
+  <li><strong>Next.js App Router</strong> — enables Server Components for faster initial loads and Server Actions for type-safe API calls without writing manual endpoints</li>
+  <li><strong>Prisma + PostgreSQL</strong> — provides a strongly-typed schema that catches data issues at compile time; PostgreSQL handles the relational complexity of trips, users, and audit logs</li>
+  <li><strong>NextAuth v5</strong> — mature auth library with built-in session management, CSRF protection, and credential provider for email/password login</li>
+  <li><strong>Zod</strong> — shared validation schemas used on both client (forms) and server (actions), ensuring consistency</li>
+  <li><strong>Resend</strong> — simple, developer-friendly email API with React Email support</li>
+  <li><strong>Capacitor</strong> — allows wrapping the same web app into native iOS/Android shells without maintaining separate codebases</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 3. ARCHITECTURE ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="architecture"><span class="section-number">3.</span> Architecture &amp; Directory Structure</h2>
+
+<h3>Project Root</h3>
+<pre><code>campus-cab-app/
+├── prisma/
+│   ├── schema.prisma          # Database schema (16 models)
+│   ├── seed.ts                # Seed data (campus locations)
+│   └── test.db                # SQLite for testing
+├── src/
+│   ├── app/                   # Next.js App Router pages
+│   │   ├── layout.tsx         # Root layout (providers, footer)
+│   │   ├── page.tsx           # Landing page (hero, features, CTA)
+│   │   ├── login/             # Login page
+│   │   ├── register/          # Registration (student + driver)
+│   │   ├── forgot-password/   # 3-step password recovery
+│   │   ├── reset-password/    # Token-based password reset
+│   │   ├── student/           # Student dashboard, booking, rides, profile
+│   │   ├── driver/            # Driver dashboard, rides, earnings, inspection, profile
+│   │   └── api/               # API routes (audit-logs, locations, push-tokens, auth)
+│   ├── components/            # Reusable React components
+│   │   ├── active-ride-tracker.tsx   # Real-time ride status display
+│   │   ├── sos-button.tsx           # Emergency SOS with GPS
+│   │   ├── navigation.tsx           # Role-based navigation
+│   │   ├── password-input.tsx       # Show/hide password toggle
+│   │   ├── session-provider.tsx     # NextAuth session wrapper
+│   │   ├── theme-provider.tsx       # Light/dark mode
+│   │   ├── push-notification-provider.tsx  # Push notifications
+│   │   ├── service-worker-registration.tsx # PWA service worker
+│   │   ├── offline-banner.tsx       # Offline status indicator
+│   │   ├── footer.tsx               # Site footer
+│   │   └── spinner.tsx              # Loading spinner
+│   ├── lib/
+│   │   ├── auth.ts            # NextAuth configuration + helpers
+│   │   ├── prisma.ts          # Prisma client singleton
+│   │   ├── validations.ts     # Zod schemas + hint answer validation
+│   │   ├── email.ts           # Resend email templates (6 templates)
+│   │   ├── audit.ts           # Audit logging system
+│   │   ├── rate-limit.ts      # In-memory sliding window rate limiter
+│   │   ├── push-notifications.ts # Push notification helpers
+│   │   └── actions/           # Server Actions
+│   │       ├── auth.ts        # Register, login, forgot/reset password
+│   │       ├── trips.ts       # Create, accept, start, complete, cancel trips
+│   │       ├── driver.ts      # Driver online/offline, inspection
+│   │       └── misc.ts        # SOS, ratings, profile, notifications
+│   └── middleware.ts          # Root redirect (/ → /login)
+├── tests/                     # Vitest test suites (79 tests)
+├── public/                    # Static assets (favicon, OG image, manifest)
+├── package.json
+├── next.config.ts
+├── vercel.json
+└── tsconfig.json</code></pre>
+
+<h3>Architecture Pattern</h3>
+<div class="callout callout-info">
+  <strong>Server Actions over API Routes:</strong> The app primarily uses Next.js Server Actions (functions marked <code>'use server'</code>) instead of traditional REST API endpoints. This provides type-safe server calls directly from components without manual fetch calls, error handling, or loading states.
+</div>
+
+<p>The application follows a <strong>layered architecture</strong>:</p>
+<ol>
+  <li><strong>Presentation Layer</strong> — React components and pages in <code>src/app/</code> and <code>src/components/</code></li>
+  <li><strong>Action Layer</strong> — Server Actions in <code>src/lib/actions/</code> handle business logic</li>
+  <li><strong>Data Layer</strong> — Prisma ORM interacts with PostgreSQL</li>
+  <li><strong>Infrastructure Layer</strong> — Rate limiting, audit logging, email delivery</li>
+</ol>
+
+<!-- ═══════════════════════════════════════════ 4. DATABASE ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="database"><span class="section-number">4.</span> Database Schema &amp; Models</h2>
+
+<p>The database uses <strong>PostgreSQL</strong> with <strong>Prisma</strong> as the ORM. The schema contains <strong>16 models</strong> with UUID primary keys and snake_case column mapping.</p>
+
+<h3>Entity Relationship Diagram</h3>
+<div class="flow-diagram">
+User ──┬── Student ──┐
+       │              ├── Trip ──┬── TripPassenger
+       ├── Driver ────┘         ├── RideStatusHistory
+       │     ├── Vehicle        ├── Rating
+       │     └── VehicleInspection └── SafetyAlert
+       ├── Notification
+       ├── SafetyAlert
+       ├── UserPreference
+       ├── PasswordResetToken
+       └── AuditLog
+
+CampusLocation ──┬── Trip (Pickup)
+                 └── Trip (Dropoff)
+
+PushToken (standalone)
+</div>
+
+<h3>Core Models</h3>
+
+<table>
+  <tr><th>Model</th><th>Purpose</th><th>Key Fields</th></tr>
+  <tr>
+    <td><strong>User</strong></td>
+    <td>Base user account (both roles)</td>
+    <td>email, passwordHash, role (STUDENT/DRIVER), passwordHintQuestion, passwordHintAnswer</td>
+  </tr>
+  <tr>
+    <td><strong>Student</strong></td>
+    <td>Student-specific profile</td>
+    <td>matricNo (unique), university</td>
+  </tr>
+  <tr>
+    <td><strong>Driver</strong></td>
+    <td>Driver-specific profile</td>
+    <td>driverId, isOnline, avgRating, totalTrips</td>
+  </tr>
+  <tr>
+    <td><strong>Vehicle</strong></td>
+    <td>Driver's vehicle info</td>
+    <td>make, model, color, licensePlate</td>
+  </tr>
+  <tr>
+    <td><strong>Trip</strong></td>
+    <td>Ride booking record</td>
+    <td>rideType, passengerCount, totalFare, status (5 states)</td>
+  </tr>
+  <tr>
+    <td><strong>CampusLocation</strong></td>
+    <td>Pickup/dropoff points</td>
+    <td>name, lat, lng</td>
+  </tr>
+  <tr>
+    <td><strong>VehicleInspection</strong></td>
+    <td>Pre-ride safety checklist</td>
+    <td>brakes, tires, lights, fireExtinguisher, firstAidKit, etc.</td>
+  </tr>
+  <tr>
+    <td><strong>SafetyAlert</strong></td>
+    <td>SOS emergency records</td>
+    <td>latitude, longitude, status (PENDING/ACKNOWLEDGED/RESOLVED)</td>
+  </tr>
+  <tr>
+    <td><strong>Rating</strong></td>
+    <td>Post-ride driver rating</td>
+    <td>score (1-5), feedback</td>
+  </tr>
+  <tr>
+    <td><strong>AuditLog</strong></td>
+    <td>System-wide audit trail</td>
+    <td>action, entity, entityId, details (JSON), ipAddress</td>
+  </tr>
+  <tr>
+    <td><strong>PasswordResetToken</strong></td>
+    <td>Token-based password recovery</td>
+    <td>token (hex), expiresAt, usedAt</td>
+  </tr>
+  <tr>
+    <td><strong>PushToken</strong></td>
+    <td>Device push notification tokens</td>
+    <td>token (unique), platform, isActive</td>
+  </tr>
+</table>
+
+<h3>Trip Status State Machine</h3>
+<div class="flow-diagram">
+PENDING ──→ ACCEPTED ──→ IN_PROGRESS ──→ COMPLETED
+   │            │              │
+   └────────────┴──────────────┘
+                │
+                ↓
+           CANCELLED
+</div>
+
+<p>Valid transitions: PENDING → ACCEPTED → IN_PROGRESS → COMPLETED. Any active state can transition to CANCELLED. Status history is tracked in <code>RideStatusHistory</code>.</p>
+
+<h3>Key Design Decisions</h3>
+<ul>
+  <li><strong>UUID primary keys</strong> — prevents ID enumeration attacks and works well with distributed systems</li>
+  <li><strong>Separate Student/Driver models</strong> — keeps role-specific data isolated while sharing auth via User</li>
+  <li><strong>Hint answers are bcrypt-hashed</strong> — even database admins cannot read the original answers</li>
+  <li><strong>Cascade deletes</strong> — deleting a User removes their Student/Driver profile, trips, and notifications</li>
+  <li><strong>Indexed fields</strong> — Trip(status, driverId, studentId), Notification(userId, isRead), AuditLog(entity, userId, action, createdAt)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 5. AUTH ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="authentication"><span class="section-number">5.</span> Authentication System</h2>
+
+<h3>Technology</h3>
+<p>Uses <strong>NextAuth.js v5</strong> with the <strong>Credentials Provider</strong> for email/password authentication. Sessions are managed via <strong>JWT tokens</strong> (not database sessions).</p>
+
+<h3>Registration Flow</h3>
+<div class="flow-diagram">
+User fills registration form
+        │
+        ▼
+Server Action: registerStudent/registerDriver
+        │
+        ├── Validate input (Zod schema)
+        ├── Check rate limit (3 per 5 min)
+        ├── Check for existing email/matricNo/driverId
+        ├── Hash password with bcrypt (12 rounds)
+        ├── Hash hint answer with bcrypt (10 rounds)
+        ├── Create User + Student/Driver + Vehicle (transaction)
+        ├── Log auth event (audit)
+        └── Return success
+
+Password stored as:    $2a$12$... (bcrypt hash)
+Hint answer stored as: $2a$10$... (bcrypt hash)
+</div>
+
+<h3>Login Flow</h3>
+<div class="flow-diagram">
+User enters email + password
+        │
+        ▼
+Server Action: loginUser
+        │
+        ├── Validate input (Zod schema)
+        ├── Look up user by email
+        ├── Compare password with bcrypt
+        └── Return result with code:
+            • LOGIN_SUCCESS → NextAuth signIn()
+            • ACCOUNT_NOT_FOUND
+            • INVALID_PASSWORD → Shows "Forgot Password?" link
+            • VALIDATION_ERROR
+
+NextAuth JWT callback:
+  token.role = user.role
+  token.userId = user.id
+</div>
+
+<h3>Session Management</h3>
+<ul>
+  <li><strong>JWT-based</strong> — session data stored in encrypted cookie, not in database</li>
+  <li><strong>Role in token</strong> — <code>role: STUDENT | DRIVER</code> stored in JWT for fast authorization checks</li>
+  <li><strong>Server-side checks</strong> — Layouts and Server Actions call <code>auth()</code> to verify sessions</li>
+  <li><strong>Middleware</strong> — lightweight, only redirects <code>/</code> to <code>/login</code>; auth is checked in layouts</li>
+</ul>
+
+<h3>Role-Based Routing</h3>
+<table>
+  <tr><th>Route</th><th>Access</th><th>Redirect if unauthorized</th></tr>
+  <tr><td><code>/student/dashboard</code></td><td>STUDENT only</td><td>→ <code>/login</code></td></tr>
+  <tr><td><code>/student/book</code></td><td>STUDENT only</td><td>→ <code>/login</code></td></tr>
+  <tr><td><code>/driver/dashboard</code></td><td>DRIVER only</td><td>→ <code>/login</code></td></tr>
+  <tr><td><code>/driver/inspection</code></td><td>DRIVER only</td><td>→ <code>/login</code></td></tr>
+  <tr><td><code>/login</code></td><td>Public</td><td>—</td></tr>
+  <tr><td><code>/register/*</code></td><td>Public</td><td>—</td></tr>
+  <tr><td><code>/forgot-password</code></td><td>Public</td><td>—</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ 6. PASSWORD RECOVERY ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="password-recovery"><span class="section-number">6.</span> Password Recovery (Hint-Based)</h2>
+
+<p>Unlike typical email-link password resets, Campus Cab uses a <strong>security question (hint) system</strong>. During registration, users choose a question from 6 predefined options and provide a bcrypt-hashed answer. Recovery uses this hint to verify identity.</p>
+
+<h3>Predefined Security Questions</h3>
+<ol>
+  <li>What is your favorite food?</li>
+  <li>What is your mother's maiden name?</li>
+  <li>What city were you born in?</li>
+  <li>What was the name of your first pet?</li>
+  <li>What is the name of your best friend?</li>
+  <li>What was the make of your first car?</li>
+</ol>
+
+<h3>3-Step Recovery Flow</h3>
+<div class="flow-diagram">
+STEP 1: IDENTIFY
+  User enters email → Server looks up hint question
+  (Returns generic question if account doesn't exist — prevents enumeration)
+
+        ↓
+
+STEP 2: VERIFY
+  User selects question + enters answer → Server bcrypt-compares answer
+  → If correct: generates 32-byte hex reset token (10-minute expiry)
+  → Invalidates any previous unused tokens
+
+        ↓
+
+STEP 3: RESET
+  User enters new password + confirmation
+  → Server validates token (exists, not used, not expired)
+  → Hashes new password with bcrypt (12 rounds)
+  → Updates password + marks token as used (in transaction)
+</div>
+
+<h3>Security Features</h3>
+<ul>
+  <li><strong>Account enumeration prevention</strong> — always returns a hint question, even for non-existent emails</li>
+  <li><strong>Answer hashing</strong> — hint answers stored as bcrypt hashes, not plaintext</li>
+  <li><strong>Answer normalization</strong> — answers are trimmed and lowercased before hashing/comparison</li>
+  <li><strong>Token expiry</strong> — 10-minute window prevents stale token abuse</li>
+  <li><strong>Single-use tokens</strong> — previous tokens are invalidated when a new one is generated</li>
+  <li><strong>Client-side validation</strong> — per-question format validation (letters-only for names, any text for food)</li>
+  <li><strong>Collapsible hints</strong> — forgot-password page shows the full list of predefined questions as a reference</li>
+</ul>
+
+<h3>Client-Side Hint Validation</h3>
+<p>The <code>validateHintAnswer()</code> function in <code>validations.ts</code> applies per-question rules:</p>
+<ul>
+  <li><strong>All answers</strong>: 2-50 characters</li>
+  <li><strong>Name/city/pet/friend/car questions</strong>: only letters, spaces, hyphens, apostrophes</li>
+  <li><strong>Food question</strong>: any text allowed</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 7. RIDE BOOKING ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="ride-booking"><span class="section-number">7.</span> Ride Booking &amp; Trip Lifecycle</h2>
+
+<h3>Ride Types</h3>
+<table>
+  <tr><th>Type</th><th>Description</th><th>Fare</th></tr>
+  <tr><td><strong>Solo Quick Cab</strong></td><td>Direct point-to-point ride. Fastest option.</td><td>₦800 × passenger count</td></tr>
+  <tr><td><strong>Shared Shuttle</strong></td><td>Carpool with other students. Split the fare.</td><td>₦800 × passenger count</td></tr>
+</table>
+
+<h3>Booking Flow (Student Side)</h3>
+<div class="flow-diagram">
+Student opens /student/book
+        │
+        ├── Selects pickup location (from 4 campus locations)
+        ├── Selects drop-off location
+        ├── Chooses ride type (Solo / Shared)
+        ├── Sets passenger count (1-10)
+        └── Clicks "Book Ride"
+                │
+                ▼
+        Server Action: createTrip
+                │
+                ├── Validate (Zod schema)
+                ├── Rate limit check (10 per 5 min)
+                ├── Verify pickup ≠ dropoff
+                ├── Calculate fare (₦800 × passengers)
+                ├── Create Trip (PENDING) + TripPassenger
+                ├── Record RideStatusHistory
+                ├── Notify all online drivers (in-app notification)
+                └── Audit log
+</div>
+
+<h3>Trip Lifecycle</h3>
+<table>
+  <tr><th>Event</th><th>Triggered by</th><th>Actions</th></tr>
+  <tr><td><strong>Created</strong></td><td>Student</td><td>Trip set to PENDING. Notifications sent to all online drivers.</td></tr>
+  <tr><td><strong>Accepted</strong></td><td>Driver</td><td>Trip set to ACCEPTED. Driver assigned. Student notified + emailed.</td></tr>
+  <tr><td><strong>Started</strong></td><td>Driver</td><td>Trip set to IN_PROGRESS. Student notified + emailed.</td></tr>
+  <tr><td><strong>Completed</strong></td><td>Driver</td><td>Trip set to COMPLETED. Driver's totalTrips incremented. Student notified + emailed. Rating prompt.</td></tr>
+  <tr><td><strong>Cancelled</strong></td><td>Student or Driver</td><td>Trip set to CANCELLED. Other party notified + emailed. 30-second grace period for students.</td></tr>
+</table>
+
+<h3>Key Trip Features</h3>
+<ul>
+  <li><strong>Fare calculation</strong> — ₦800 per passenger (configurable constant)</li>
+  <li><strong>Grace period</strong> — students can cancel within 30 seconds without penalty</li>
+  <li><strong>Concurrent booking protection</strong> — Prisma transaction ensures only one driver can accept a PENDING trip</li>
+  <li><strong>Real-time tracking</strong> — <code>ActiveRideTracker</code> component polls for status updates</li>
+  <li><strong>Status history</strong> — every status change is recorded with timestamp and actor</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 8. DRIVER SYSTEM ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="driver-system"><span class="section-number">8.</span> Driver System</h2>
+
+<h3>Driver Features</h3>
+<table>
+  <tr><th>Feature</th><th>Description</th></tr>
+  <tr><td><strong>Online/Offline Toggle</strong></td><td>Drivers set their availability. Only online drivers receive ride notifications.</td></tr>
+  <tr><td><strong>Ride Queue</strong></td><td>View and accept pending ride requests in real-time.</td></tr>
+  <tr><td><strong>Ride Management</strong></td><td>Start, complete, or cancel assigned rides.</td></tr>
+  <tr><td><strong>Earnings Dashboard</strong></td><td>View completed trips and total earnings.</td></tr>
+  <tr><td><strong>Vehicle Inspection</strong></td><td>8-point safety checklist before going online.</td></tr>
+  <tr><td><strong>Profile Management</strong></td><td>Update name, phone, vehicle details.</td></tr>
+</table>
+
+<h3>Vehicle Inspection Checklist</h3>
+<p>Drivers must complete an 8-point inspection before going online. All items are required:</p>
+<ol>
+  <li>✅ Brakes functional</li>
+  <li>✅ Tires in good condition</li>
+  <li>✅ All lights working</li>
+  <li>✅ Interior clean</li>
+  <li>✅ No trash</li>
+  <li>✅ Fire extinguisher present</li>
+  <li>✅ First aid kit present</li>
+  <li>✅ Fuel/Battery above 50%</li>
+</ol>
+
+<h3>Driver Registration</h3>
+<p>Driver registration collects additional vehicle information:</p>
+<ul>
+  <li>Driver ID (unique identifier)</li>
+  <li>Vehicle make, model, color</li>
+  <li>License plate number</li>
+  <li>Password hint question + answer (same 6 predefined questions as students)</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 9. SAFETY ═══════════════════════════════════════════ -->
+<h2 id="safety"><span class="section-number">9.</span> Safety Features (SOS)</h2>
+
+<h3>SOS Button</h3>
+<p>Available on the student dashboard during active rides. When triggered:</p>
+<ol>
+  <li><strong>Confirmation dialog</strong> — prevents accidental activation</li>
+  <li><strong>GPS capture</strong> — requests browser geolocation (5-second timeout)</li>
+  <li><strong>Alert creation</strong> — creates SafetyAlert record with coordinates</li>
+  <li><strong>Email to admin</strong> — sends emergency email with user info, location (Google Maps link), and ride details</li>
+  <li><strong>Confirmation email</strong> — sent to the student confirming the alert was recorded</li>
+  <li><strong>Audit log</strong> — records the SOS event with full context</li>
+</ol>
+
+<h3>SOS Email Content</h3>
+<ul>
+  <li>User name and email</li>
+  <li>Timestamp</li>
+  <li>GPS coordinates with Google Maps link</li>
+  <li>Active ride information (pickup/dropoff)</li>
+  <li>Action required notice</li>
+</ul>
+
+<div class="callout callout-danger">
+  <strong>Rate Limiting:</strong> SOS is rate-limited to 3 triggers per 10 minutes to prevent abuse. The SOS button is also available in the ride tracker component during active rides.
+</div>
+
+<!-- ═══════════════════════════════════════════ 10. NOTIFICATIONS ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="notifications"><span class="section-number">10.</span> Notifications &amp; Email</h2>
+
+<h3>In-App Notifications</h3>
+<p>Stored in the <code>notifications</code> table with read/unread status and types:</p>
+<table>
+  <tr><th>Type</th><th>Trigger</th><th>Recipient</th></tr>
+  <tr><td><code>NEW_RIDE_REQUEST</code></td><td>Student books a ride</td><td>All online drivers</td></tr>
+  <tr><td><code>RIDE_ACCEPTED</code></td><td>Driver accepts ride</td><td>Booking student</td></tr>
+  <tr><td><code>RIDE_STARTED</code></td><td>Driver starts ride</td><td>Booking student</td></tr>
+  <tr><td><code>RIDE_COMPLETED</code></td><td>Driver completes ride</td><td>Booking student</td></tr>
+  <tr><td><code>RIDE_CANCELLED</code></td><td>Either party cancels</td><td>Other party</td></tr>
+</table>
+
+<h3>Email Notifications (Resend)</h3>
+<p>Six email templates are provided, all using a branded HTML template:</p>
+<ol>
+  <li><strong>Ride Accepted</strong> — driver name, pickup/dropoff, fare, passenger count</li>
+  <li><strong>Ride Started</strong> — driver name, route, safety reminder</li>
+  <li><strong>Ride Completed</strong> — trip summary, rating prompt</li>
+  <li><strong>Ride Cancelled</strong> — cancellation notice with who cancelled</li>
+  <li><strong>SOS Alert</strong> — emergency details with GPS and ride info</li>
+  <li><strong>SOS Confirmation</strong> — confirmation to the person who triggered SOS</li>
+</ol>
+
+<div class="callout callout-info">
+  <strong>Non-blocking emails:</strong> All email sends are wrapped in <code>.catch(() => {})</code> so they never block the main operation or cause user-facing errors if the email service is down.
+</div>
+
+<h3>Push Notifications</h3>
+<p>The app includes Capacitor push notification support via <code>@capacitor/push-notifications</code>. Push tokens are stored in the <code>push_tokens</code> table and managed via the <code>PushNotificationProvider</code> component.</p>
+
+<!-- ═══════════════════════════════════════════ 11. SECURITY ═══════════════════════════════════════════ -->
+<h2 id="security"><span class="section-number">11.</span> Security &amp; Rate Limiting</h2>
+
+<h3>Rate Limiter</h3>
+<p>An in-memory sliding window rate limiter protects all sensitive endpoints:</p>
+<table>
+  <tr><th>Action</th><th>Limit</th><th>Window</th></tr>
+  <tr><td>Login</td><td>5 attempts</td><td>1 minute</td></tr>
+  <tr><td>Registration</td><td>3 attempts</td><td>5 minutes</td></tr>
+  <tr><td>Booking</td><td>10 requests</td><td>5 minutes</td></tr>
+  <tr><td>SOS</td><td>3 triggers</td><td>10 minutes</td></tr>
+  <tr><td>Rating</td><td>20 submissions</td><td>5 minutes</td></tr>
+  <tr><td>Password Reset</td><td>5 attempts</td><td>1 minute</td></tr>
+  <tr><td>API</td><td>60 requests</td><td>1 minute</td></tr>
+</table>
+
+<div class="callout callout-warning">
+  <strong>Production Note:</strong> The in-memory rate limiter resets on serverless cold starts and doesn't share state across Vercel's distributed instances. For production-grade rate limiting, replace with Redis-backed <code>@upstash/ratelimit</code>.
+</div>
+
+<h3>Security Measures</h3>
+<ul>
+  <li><strong>Password hashing</strong> — bcrypt with 12 salt rounds</li>
+  <li><strong>Hint answer hashing</strong> — bcrypt with 10 salt rounds (answers never stored in plaintext)</li>
+  <li><strong>Zod validation</strong> — all inputs validated on both client and server</li>
+  <li><strong>CSRF protection</strong> — NextAuth handles CSRF tokens automatically</li>
+  <li><strong>JWT sessions</strong> — encrypted session cookies, not database-stored sessions</li>
+  <li><strong>Server Actions</strong> — no exposed API endpoints for sensitive operations</li>
+  <li><strong>Rate limiting</strong> — all auth and booking endpoints are rate-limited</li>
+  <li><strong>Account enumeration prevention</strong> — forgot-password always returns a question</li>
+  <li><strong>Single-use reset tokens</strong> — previous tokens invalidated on new request</li>
+  <li><strong>Input sanitization</strong> — trim, lowercase normalization on emails and answers</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 12. AUDIT ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="audit"><span class="section-number">12.</span> Audit Logging</h2>
+
+<p>Every significant action is recorded in the <code>audit_logs</code> table for compliance and debugging:</p>
+
+<table>
+  <tr><th>Category</th><th>Actions Logged</th></tr>
+  <tr><td><strong>Trip</strong></td><td>created, accepted, started, completed, cancelled</td></tr>
+  <tr><td><strong>Safety</strong></td><td>sos.triggered, sos.acknowledged, sos.resolved</td></tr>
+  <tr><td><strong>Auth</strong></td><td>auth.login, auth.register, auth.logout, auth.password_reset_request, auth.password_reset_complete</td></tr>
+  <tr><td><strong>Driver</strong></td><td>driver.went_online, driver.went_offline, driver.inspection_submitted</td></tr>
+  <tr><td><strong>Rating</strong></td><td>rating.submitted</td></tr>
+</table>
+
+<h3>Audit Log Entry Structure</h3>
+<pre><code>{
+  userId:     "uuid"     — who performed the action
+  action:     "string"   — action type (e.g., "trip.accepted")
+  entity:     "string"   — entity type (e.g., "Trip")
+  entityId:   "uuid"     — specific entity ID
+  details:    { ... }    — JSON context (from/to states, fare, locations)
+  ipAddress:  "string"   — client IP from headers
+  createdAt:  timestamp  — auto-generated
+}</code></pre>
+
+<p>All audit logging is <strong>fire-and-forget</strong> — errors are caught and logged to console, never blocking the main operation.</p>
+
+<!-- ═══════════════════════════════════════════ 13. TESTING ═══════════════════════════════════════════ -->
+<h2 id="testing"><span class="section-number">13.</span> Testing</h2>
+
+<h3>Framework</h3>
+<p>Uses <strong>Vitest</strong> with <code>@testing-library/react</code> for component tests and <code>jsdom</code> for browser environment simulation. Tests use an in-memory SQLite database via <code>better-sqlite3</code>.</p>
+
+<h3>Test Suites (79 tests)</h3>
+<table>
+  <tr><th>File</th><th>Coverage</th></tr>
+  <tr><td><code>auth.test.ts</code></td><td>Registration, login, validation, rate limiting</td></tr>
+  <tr><td><code>password-reset.test.ts</code></td><td>3-step recovery flow, token generation, expiry, reuse</td></tr>
+  <tr><td><code>booking.test.ts</code></td><td>Trip creation, fare calculation, location validation</td></tr>
+  <tr><td><code>trip-lifecycle.test.ts</code></td><td>Full trip state machine (accept, start, complete, cancel)</td></tr>
+  <tr><td><code>features.test.ts</code></td><td>Inspections, ratings, notifications, user management</td></tr>
+  <tr><td><code>sos-button.test.tsx</code></td><td>SOS component interaction and state management</td></tr>
+</table>
+
+<h3>Running Tests</h3>
+<pre><code># Run all tests
+npm test
+
+# Run in watch mode
+npm run test:watch
+
+# Run specific suite
+npx vitest run tests/auth.test.ts</code></pre>
+
+<!-- ═══════════════════════════════════════════ 14. MOBILE ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="mobile"><span class="section-number">14.</span> Mobile (Capacitor)</h2>
+
+<p>The app is configured for native mobile deployment via <strong>Capacitor 8</strong>, allowing the same codebase to run as a native iOS/Android app.</p>
+
+<h3>Mobile Commands</h3>
+<pre><code># Initialize Capacitor
+npm run cap:init
+
+# Add platform
+npm run cap:add:android
+npm run cap:add:ios
+
+# Build and sync
+npm run mobile:build    # npm run build && cap sync
+
+# Open in IDE
+npm run mobile:android  # Opens Android Studio
+npm run mobile:ios      # Opens Xcode</code></pre>
+
+<h3>Mobile-Specific Features</h3>
+<ul>
+  <li><strong>Push Notifications</strong> — via <code>@capacitor/push-notifications</code></li>
+  <li><strong>Local Notifications</strong> — via <code>@capacitor/local-notifications</code></li>
+  <li><strong>Service Worker</strong> — registered for offline support and PWA capabilities</li>
+  <li><strong>Offline Banner</strong> — shows connectivity status</li>
+  <li><strong>Web Manifest</strong> — enables "Add to Home Screen" on mobile browsers</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 15. DEPLOYMENT ═══════════════════════════════════════════ -->
+<h2 id="deployment"><span class="section-number">15.</span> Deployment</h2>
+
+<h3>Platform</h3>
+<p>Deployed on <strong>Vercel</strong> with automatic deployments from the <code>main</code> branch.</p>
+
+<h3>Build Configuration</h3>
+<pre><code>// vercel.json
+{
+  "buildCommand": "prisma generate && next build",
+  "installCommand": "npm install"
+}</code></pre>
+
+<h3>Deployment Pipeline</h3>
+<div class="flow-diagram">
+git push to main
+        │
+        ▼
+Vercel detects push → triggers build
+        │
+        ├── npm install
+        ├── prisma generate (generates Prisma Client)
+        ├── next build (compiles Next.js app)
+        └── Deploy to production
+                │
+                ▼
+campuscab-pi.vercel.app (Production)
+</div>
+
+<h3>Domain</h3>
+<p>Custom domain: <strong>campuscab-pi.vercel.app</strong></p>
+
+<h3>Build Optimizations</h3>
+<ul>
+  <li><strong>Server Components</strong> — most pages are server-rendered, reducing client bundle</li>
+  <li><strong>Static generation</strong> — landing page is statically generated</li>
+  <li><strong>Image optimization</strong> — disabled (<code>unoptimized: true</code>) for static export compatibility</li>
+  <li><strong>Font optimization</strong> — Geist and Geist Mono loaded via <code>next/font</code></li>
+</ul>
+
+<!-- ═══════════════════════════════════════════ 16. ENV ═══════════════════════════════════════════ -->
+<div class="page-break"></div>
+<h2 id="env"><span class="section-number">16.</span> Environment Variables</h2>
+
+<table>
+  <tr><th>Variable</th><th>Required</th><th>Purpose</th></tr>
+  <tr><td><code>DATABASE_URL</code></td><td>✅</td><td>PostgreSQL connection string</td></tr>
+  <tr><td><code>NEXTAUTH_SECRET</code></td><td>✅</td><td>JWT encryption key (random 32+ chars)</td></tr>
+  <tr><td><code>NEXTAUTH_URL</code></td><td>✅</td><td>Base URL (e.g., https://campuscab-pi.vercel.app)</td></tr>
+  <tr><td><code>RESEND_API_KEY</code></td><td>Optional</td><td>Resend email API key (emails skipped if missing)</td></tr>
+  <tr><td><code>EMAIL_FROM</code></td><td>Optional</td><td>Sender email address</td></tr>
+  <tr><td><code>NEXT_PUBLIC_APP_URL</code></td><td>Optional</td><td>Public URL for email links</td></tr>
+</table>
+
+<div class="callout callout-info">
+  <strong>Graceful degradation:</strong> If <code>RESEND_API_KEY</code> is not set, the app works fully but email notifications are skipped with console warnings. This allows development without an email service.
+</div>
+
+<!-- ═══════════════════════════════════════════ 17. FUTURE ═══════════════════════════════════════════ -->
+<h2 id="future"><span class="section-number">17.</span> Future Enhancements</h2>
+
+<table>
+  <tr><th>Feature</th><th>Priority</th><th>Description</th></tr>
+  <tr><td><strong>Real-time ride tracking</strong></td><td>High</td><td>WebSocket-based GPS tracking for active rides</td></tr>
+  <tr><td><strong>Redis rate limiting</strong></td><td>High</td><td>Replace in-memory limiter with <code>@upstash/ratelimit</code></td></tr>
+  <tr><td><strong>Payment integration</strong></td><td>High</td><td>Card/mobile money payments via Flutterwave (Standard hosted checkout)</td></tr>
+  <tr><td><strong>Admin dashboard</strong></td><td>Medium</td><td>Manage users, drivers, trips, and view analytics</td></tr>
+  <tr><td><strong>Multi-campus support</strong></td><td>Medium</td><td>Support multiple universities with isolated data</td></tr>
+  <tr><td><strong>Driver location sharing</strong></td><td>Medium</td><td>Real-time driver location on student's map</td></tr>
+  <tr><td><strong>Ride scheduling</strong></td><td>Low</td><td>Book rides in advance for specific times</td></tr>
+  <tr><td><strong>Promo codes</strong></td><td>Low</td><td>Discount system for first rides or referrals</td></tr>
+  <tr><td><strong>i18n</strong></td><td>Low</td><td>Multi-language support (Yoruba, Igbo, Hausa)</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════ FOOTER ═══════════════════════════════════════════ -->
+<div class="footer">
+  <p><strong>Campus Cab</strong> — University Ride-Hailing Platform</p>
+  <p>Built by Veltrix &nbsp;·&nbsp; <a href="https://campuscab-pi.vercel.app">campuscab-pi.vercel.app</a></p>
+  <p style="margin-top: 8px;">Version 1.0 &nbsp;·&nbsp; Last updated: September 2026</p>
+  <p style="margin-top: 16px; font-size: 11px; color: #9ca3af;">
+    To save as PDF: press Ctrl+P (or Cmd+P on Mac) → Select "Save as PDF" as the destination
+  </p>
+</div>
+
+</div><!-- /container -->
+
+</body>
+</html>

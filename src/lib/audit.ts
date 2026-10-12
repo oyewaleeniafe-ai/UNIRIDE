@@ -28,6 +28,7 @@ export type AuditAction =
   | 'payment.successful'
   | 'payment.failed'
   | 'payment.amount_mismatch'
+  | 'payment.currency_mismatch'
   | 'payment.error'
   // Payout actions
   | 'payout.initiated'

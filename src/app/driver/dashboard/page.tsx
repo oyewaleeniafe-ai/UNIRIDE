@@ -1,7 +1,6 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import CampusMap from '@/components/campus-map-lazy';
 import { toggleDriverOnline } from '@/lib/actions/driver';
 import OnlineToggle from './OnlineToggle';
 import RideActions from '@/components/ride-actions';
@@ -116,23 +115,6 @@ export default async function DriverDashboard() {
           initialOnline={driver?.isOnline || false}
           isInspectionComplete={isInspectionComplete}
         />
-      </div>
-
-      {/* Campus map — restrained secondary panel placed above the main driver cards */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-[var(--foreground)] uppercase tracking-wide">Campus Map</h2>
-          <span className="text-[11px] text-[var(--muted-fg)]">Reference only · not for navigation</span>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3">
-            <CampusMap height="200px" markers={[]} />
-          </div>
-          <div className="lg:col-span-2 cc-card rounded-2xl p-4 text-sm text-[var(--muted)] leading-relaxed">
-            <p className="font-medium text-[var(--foreground)] mb-1">Campus map view</p>
-            <p>Pan and zoom to explore campus landmarks. This is a visual reference — ride requests and acceptance use the dashboard below.</p>
-          </div>
-        </div>
       </div>
 
       {/* Vehicle & Status */}

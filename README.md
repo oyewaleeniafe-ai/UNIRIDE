@@ -79,6 +79,49 @@ Models: User, Student, Driver, Vehicle, Trip, TripPassenger, CampusLocation, Veh
 
 29 official university locations are seeded. These are the only valid pickup/drop-off points.
 
+## Payments
+
+CampusCab uses **Flutterwave Standard (hosted checkout)** as the only payment provider.
+
+- Amounts are always calculated server-side from the trip's ride type (`SOLO_QUICK_CAB` = ₦800 + ₦10, `SHARED_SHUTTLE` = ₦200 + ₦10). The frontend never controls the amount.
+- Each payment gets a unique `tx_ref` (`ccab-...`).
+- On success, the student is redirected to `/api/payments/verify?reference=<tx_ref>`, which re-verifies the transaction with Flutterwave before confirming the booking.
+- A webhook (`/api/payments/webhook`, POST) is also supported for async confirmation. It validates the `verif-hash` header against `FLUTTERWAVE_WEBHOOK_SECRET` and re-verifies against the Flutterwave API before updating state.
+- Pending, failed, cancelled, and expired payments are handled explicitly; a frontend redirect alone is never treated as proof of payment.
+
+### Environment variables
+
+Add these to `.env` (copy from `.env.example`):
+
+```bash
+FLUTTERWAVE_SECRET_KEY="FLWXXXXXXXX"
+FLUTTERWAVE_WEBHOOK_SECRET="your_webhook_secret_hash"
+FLUTTERWAVE_TRANSFERS_ENABLED=
+```
+
+- `FLUTTERWAVE_SECRET_KEY` — from the Flutterwave dashboard Settings → API keys.
+- `FLUTTERWAVE_WEBHOOK_SECRET` — the secret hash you set in Settings → Webhooks.
+- `FLUTTERWAVE_TRANSFERS_ENABLED` — leave empty unless driver payouts are approved on the merchant account.
+
+### Flutterwave dashboard configuration
+
+1. In Settings → Webhooks, add your webhook URL: `https://campuscab-pi.vercel.app/api/payments/webhook`
+2. Enable all payment event checkboxes, then save.
+3. Set your webhook **secret hash** (`FLUTTERWAVE_WEBHOOK_SECRET`) and note it.
+4. Keep `NEXT_PUBLIC_APP_URL` matching your deployed URL so checkout redirects land correctly.
+
+### Driver payouts
+
+Payouts use Flutterwave bank transfers (`POST /v3/transfers`). They are **not automatic**:
+
+- Payouts are only initiated for completed trips with a successful payment on file.
+- Only the assigned driver or an admin may initiate the payout.
+- Payouts require `FLUTTERWAVE_TRANSFERS_ENABLED=1` **and** a Flutterwave merchant account that is approved for transfers (KYC, server IP whitelist, Transfers API enabled).
+- If transfers are not enabled, payout initiation returns an explicit error — it never quietly succeeds or fabricates a transfer.
+- Duplicate transfers are prevented because each payout is tied to one payment and one trip.
+
+> Payment collection does **not** automatically enable payouts. If your Flutterwave account isn't approved for transfers, driver payouts will return an error until the merchant approval is in place.
+
 ## Deployment
 
 ### Web (Vercel/Netlify)

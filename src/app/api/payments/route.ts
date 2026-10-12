@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializePayment } from '@/lib/actions/payments';
-import type { Provider } from '@/lib/payments';
 
 export async function POST(request: NextRequest) {
   let body: { tripId?: string; provider?: string };
@@ -12,20 +11,23 @@ export async function POST(request: NextRequest) {
   }
 
   const tripId = body.tripId;
-  const provider = body.provider?.toUpperCase();
 
   if (!tripId || typeof tripId !== 'string') {
     return NextResponse.json({ error: 'tripId is required' }, { status: 400 });
   }
 
-  if (!provider || (!provider.startsWith('PALMPAY') && provider !== 'OPAY')) {
-    return NextResponse.json({ error: 'Valid provider is required (PALMPAY or OPAY)' }, { status: 400 });
-  }
-
-  const result = await initializePayment(tripId, provider as Provider);
+  // CampusCab only supports Flutterwave. The provider field is accepted from
+  // older clients for backward compatibility but ignored — it is always
+  // Flutterwave internally.
+  const result = await initializePayment(tripId);
 
   if (result.error) {
-    return NextResponse.json({ error: result.error }, { status: result.paymentId && result.providerReference ? 409 : 400 });
+    const status = result.error.includes('logged in')
+      ? 401
+      : result.error.includes('already been paid')
+        ? 409
+        : 400;
+    return NextResponse.json({ error: result.error }, { status });
   }
 
   if (!result.success) {

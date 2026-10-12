@@ -1,10 +1,14 @@
 /**
  * Shared payment provider types for CampusCab.
  *
- * Keeps provider-specific modules decoupled from the rest of the app.
+ * CampusCab uses Flutterwave as the only payment provider. The provider enum
+ * is kept here so the rest of the app can stay decoupled from provider-specific
+ * details, but only FLUTTERWAVE is valid.
  */
 
-export type Provider = 'PALMPAY' | 'OPAY';
+export type Provider = 'FLUTTERWAVE';
+
+export type ProviderReference = string;
 
 export type PaymentState =
   | { status: 'pending' }
@@ -32,6 +36,20 @@ export interface VerifyPaymentResult {
   paidAt?: string;
   failureReason?: string;
   error?: string;
+  /** Amount as reported by Flutterwave, in NGN (major units). */
+  amount?: number;
+  /** Currency as reported by Flutterwave (e.g. "NGN"). */
+  currency?: string;
+}
+
+export interface PayoutRecipient {
+  name: string;
+  phone?: string;
+  /** Nigerian bank code where applicable. */
+  bankCode?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
 }
 
 export interface PayoutRequest {
@@ -42,21 +60,9 @@ export interface PayoutRequest {
   reference: string;
 }
 
-export interface PayoutRecipient {
-  /** Bank code where applicable (e.g. Nigerian bank code for OPay). */
-  bankCode?: string;
-  bankName?: string;
-  accountNumber?: string;
-  accountName?: string;
-  /** Provider-specific recipient identifier (e.g. PalmPay PID). */
-  providerRecipientId?: string;
-  name: string;
-  phone?: string;
-}
-
 export interface PayoutResult {
   providerReference?: string;
-  status?: 'pending' | 'processing' | 'success' | 'failed';
+  status?: 'PENDING' | 'PROCESSING' | 'SUCCESS' | 'FAILED';
   error?: string;
 }
 
@@ -73,5 +79,4 @@ export function maskAccountNumber(value: string | undefined): string {
   return `${masked}${last4}`;
 }
 
-export const PALMPAY_WEBHOOK_HEADER = (process.env.PALMPAY_WEBHOOK_SIGNATURE_HEADER ?? 'x-palmpay-signature').trim();
-export const OPAY_WEBHOOK_HEADER = (process.env.OPAY_WEBHOOK_SIGNATURE_HEADER ?? 'x-opay-signature').trim();
+export const FLUTTERWAVE_WEBHOOK_HEADER = 'verif-hash';

@@ -1,8 +1,10 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { submitRating } from '@/lib/actions/misc';
+import { getPaymentStatus } from '@/lib/actions/payments';
 import Link from 'next/link';
 import ActiveRideTracker from '@/components/active-ride-tracker';
+import PaymentStatusBanner from '@/components/payment-status-banner';
 
 export default async function StudentRidesPage() {
   const session = await auth();
@@ -46,6 +48,8 @@ export default async function StudentRidesPage() {
     take: 10,
   });
 
+  const { payment } = await getPaymentStatus(activeTrip?.id || '');
+
   const statusColors: Record<string, string> = {
     PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
     ACCEPTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
@@ -58,6 +62,13 @@ export default async function StudentRidesPage() {
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
       <h1 className="text-xl font-bold text-[var(--foreground)] mb-1">My Rides</h1>
       <p className="text-sm text-[var(--muted)] mb-6">View your ride history and active trips</p>
+
+      {payment && (
+        <PaymentStatusBanner
+          payment={payment}
+          tripId={activeTrip?.id}
+        />
+      )}
 
       {/* Active Ride with Live Tracker */}
       {activeTrip && (

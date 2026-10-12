@@ -23,6 +23,9 @@ export { prisma };
  */
 export async function cleanDatabase() {
   await prisma.auditLog.deleteMany();
+  await prisma.payout.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.driverPaymentAccount.deleteMany();
   await prisma.rating.deleteMany();
   await prisma.rideStatusHistory.deleteMany();
   await prisma.safetyAlert.deleteMany();
