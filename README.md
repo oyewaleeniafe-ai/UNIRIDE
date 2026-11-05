@@ -131,6 +131,104 @@ Payouts use Flutterwave bank transfers (`POST /v3/transfers`). They are **not au
 3. Set environment variables
 4. Deploy
 
+### School commission system — Vercel deployment checklist
+
+The 5% school commission, daily aggregation and Flutterwave settlement system ships with
+this repo. Deploy it in this order — each step is safe to run while the app is live.
+
+#### Step 1 — Verify locally before touching production
+
+```bash
+npm test                 # all suites must pass (163 tests)
+npm run build            # production build must succeed
+npx prisma validate      # schema must be valid
+```
+
+> Windows note: `next build` (Turbopack) can fail locally with `os error 5` creating a
+> junction for `@prisma/client`. That is a local symlink-permission issue — enable Windows
+> Developer Mode or build with `npx next build --webpack`. Vercel builds on Linux and is
+> unaffected.
+
+#### Step 2 — Push the schema to Neon (additive only)
+
+The commission feature adds four tables (`driver_earning`, `commission_ledger_entry`,
+`commission_settlement`, `commission_config`) and four enums. It **creates new tables only**
+and does not alter or delete existing data.
+
+```bash
+# Point DATABASE_URL at Neon, then:
+npm run db:push
+```
+
+Vercel's `postinstall` runs `prisma generate`, and `vercel.json` runs
+`prisma generate && next build` — no manual generate step is needed on deploy.
+
+#### Step 3 — Set environment variables in Vercel
+
+Project → Settings → Environment Variables. Set for **Production** (and Preview if you use it):
+
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | Yes | Neon pooled connection string |
+| `AUTH_SECRET` | Yes | NextAuth secret |
+| `NEXTAUTH_URL` | Yes | `https://campuscab-pi.vercel.app` |
+| `NEXT_PUBLIC_APP_URL` | Yes | Same as above; drives checkout redirects |
+| `FLUTTERWAVE_SECRET_KEY` | Yes | Live secret key |
+| `FLUTTERWAVE_WEBHOOK_SECRET` | Yes | Secret hash from Settings → Webhooks |
+| `FLUTTERWAVE_TRANSFERS_ENABLED` | **Leave empty for now** | The money-movement gate |
+| `CRON_SECRET` | Yes (Hobby plan) | Random string; Vercel auto-injects it into cron requests on paid plans |
+| `COMMISSION_SETTLEMENT_SECRET` | Optional | Alternative secret for external schedulers (cron-job.org, GitHub Actions) |
+| `RESEND_API_KEY` / `EMAIL_FROM` / `SOS_SECURITY_EMAIL` | Existing | Unchanged |
+
+The commission **rate, business timezone, settlement hour, minimum settlement amount and the
+school's bank account are not environment variables** — they live in the `commission_config`
+table and are edited by an ADMIN in the dashboard (auditable, no redeploy to change).
+
+#### Step 4 — Deploy
+
+`vercel.json` registers the daily settlement cron (`5 0 * * *` UTC →
+`GET /api/commission/settlements/run`). It is **daily-only by design**: Vercel's Hobby plan
+only allows daily crons, so this deploys on any plan. The endpoint requires
+`Authorization: Bearer ${CRON_SECRET}` (constant-time compared) and returns 401 otherwise.
+
+#### Step 5 — Bootstrap the first admin
+
+```bash
+node scripts/create-admin.js <admin-email> <password>
+```
+
+Then log in. Admins are redirected to `/admin/commission`; middleware, the page and every
+commission API route all enforce the ADMIN role server-side.
+
+#### Step 6 — Configure the school's recipient account
+
+On `/admin/commission` → **Config**:
+
+1. Set commission rate (default 500 bps = 5%), business timezone, settlement release hour and minimum settlement amount.
+2. Enter the school's bank + account number. The server resolves the account name via Flutterwave — confirm it matches before saving.
+3. Save (writes an audit entry).
+
+#### Step 7 — Reconcile the first days
+
+Every verified payment now accrues a `driver_earning` + `commission_ledger_entry` immediately.
+Check `/admin/commission` → **Ledger** to confirm accruals are flowing, then trigger a manual
+cycle with **Run settlement** (ADMIN only, audited). Repeated runs are always safe: the
+settlement idempotency key and the "no new transfer while one is unresolved" guard prevent
+double transfers.
+
+#### Step 8 — Enable live transfers LAST (only after Flutterwave approval)
+
+Do this only after the merchant account has KYC approval, the Transfers API enabled, and the
+server IP whitelist set on the Flutterwave dashboard:
+
+1. Set `FLUTTERWAVE_TRANSFERS_ENABLED=1` in Vercel and redeploy.
+2. Run one manual settlement for a small/known day and confirm the settlement shows a provider reference and flips to `SETTLED` only after Flutterwave confirms the transfer.
+
+> **A commission recorded in the database is not money in the school's bank account.**
+> `SETTLED` is only set after Flutterwave's transfer API confirms it. While
+> `FLUTTERWAVE_TRANSFERS_ENABLED` is unset, settlements are prepared but **no money ever
+> moves** — that is the intended safe state.
+
 ### Mobile (Capacitor — Android & iOS)
 
 #### Prerequisites

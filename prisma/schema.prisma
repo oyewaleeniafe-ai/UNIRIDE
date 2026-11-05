@@ -12,6 +12,7 @@ datasource db {
 enum UserRole {
   STUDENT
   DRIVER
+  ADMIN
 }
 
 enum RideType {
@@ -51,6 +52,46 @@ enum PayoutStatus {
   SUCCESS
   FAILED
   REVERSED
+}
+
+// ─── Commission system enums ─────────────────────────
+
+enum EarningStatus {
+  ACCRUED
+  REVERSED
+}
+
+enum EarningPayoutStatus {
+  UNPAID
+  PAID
+}
+
+enum CommissionEntryType {
+  ACCRUAL
+  ADJUSTMENT
+  REVERSAL
+}
+
+enum CommissionEntryStatus {
+  OUTSTANDING
+  RESERVED
+  SETTLED
+  REVERSED
+}
+
+enum SettlementStatus {
+  PREPARED
+  TRANSFERRING
+  SUCCESSFUL
+  FAILED
+  BLOCKED
+  CANCELLED
+}
+
+enum SettlementReconciliationStatus {
+  UNRECONCILED
+  RECONCILED
+  NEEDS_REVIEW
 }
 
 // ─── Models ───────────────────────────────────────────
@@ -106,6 +147,8 @@ model Driver {
   inspections     VehicleInspection[]
   assignedTrips   Trip[]
   ratings         Rating[]
+  earnings        DriverEarning[]
+  commissionEntries CommissionLedgerEntry[]
 
   @@map("drivers")
 }
@@ -160,6 +203,7 @@ model Trip {
   ratings         Rating[]
   safetyAlerts    SafetyAlert[]
   payments        Payment[]
+  earning         DriverEarning?
 
   @@index([status])
   @@index([driverId])
@@ -345,6 +389,7 @@ model Payment {
   user  User       @relation(fields: [userId], references: [id])
   trip  Trip       @relation(fields: [tripId], references: [id])
   payouts Payout[] @relation("PaymentPayouts")
+  earning DriverEarning?
 
   @@index([userId])
   @@index([tripId])
@@ -394,4 +439,120 @@ model Payout {
   @@index([provider])
   @@index([status])
   @@map("payouts")
+}
+
+// ─── School commission system ────────────────────────
+//
+// Money columns in the commission system are stored as INTEGER KOBO so all
+// financial arithmetic is exact. The legacy Fare/Payment columns remain NGN
+// floats and are converted once (Math.round(naira * 100)) at the boundary.
+//
+// Ledger entries are append-only: corrections are new ADJUSTMENT/REVERSAL
+// entries, never edits to committed financial records.
+
+model DriverEarning {
+  id                   String            @id @default(uuid()) @db.Uuid
+  driverId             String            @map("driver_id") @db.Uuid
+  tripId               String            @unique @map("trip_id") @db.Uuid
+  paymentId            String?           @unique @map("payment_id") @db.Uuid
+  paymentReference     String?           @map("payment_reference") @db.VarChar(100)
+  currency             String            @default("NGN")
+  eligibleAmountKobo   Int               @map("eligible_amount_kobo")
+  commissionRateBps    Int               @map("commission_rate_bps")
+  commissionAmountKobo Int               @map("commission_amount_kobo")
+  netAmountKobo        Int               @map("net_amount_kobo")
+  // Business-day marker (UTC midnight of the business day in businessTimezone)
+  earningDate          DateTime          @map("earning_date")
+  businessTimezone     String            @default("Africa/Lagos") @map("business_timezone")
+  status               EarningStatus     @default(ACCRUED)
+  payoutStatus         EarningPayoutStatus @default(UNPAID) @map("payout_status")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  driver          Driver                  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  trip            Trip                    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  payment         Payment?                @relation(fields: [paymentId], references: [id])
+  ledgerEntries   CommissionLedgerEntry[]
+
+  @@index([driverId, earningDate])
+  @@index([earningDate])
+  @@index([status])
+  @@map("driver_earnings")
+}
+
+model CommissionLedgerEntry {
+  id                String                @id @default(uuid()) @db.Uuid
+  driverId          String                @map("driver_id") @db.Uuid
+  earningId         String?               @map("earning_id") @db.Uuid
+  settlementId      String?               @map("settlement_id") @db.Uuid
+  amountKobo        Int                   @map("amount_kobo")
+  commissionRateBps Int                   @map("commission_rate_bps")
+  // Business day this commission belongs to (UTC midnight marker)
+  periodDate        DateTime              @map("period_date")
+  entryType         CommissionEntryType   @map("entry_type")
+  status            CommissionEntryStatus @default(OUTSTANDING)
+  reversalOfId      String?               @map("reversal_of_id") @db.Uuid
+  note              String?
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  driver      Driver                  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  earning     DriverEarning?          @relation(fields: [earningId], references: [id])
+  settlement  CommissionSettlement?   @relation(fields: [settlementId], references: [id])
+
+  @@index([status, periodDate])
+  @@index([driverId, periodDate])
+  @@index([settlementId])
+  @@map("commission_ledger_entries")
+}
+
+model CommissionSettlement {
+  id                    String                          @id @default(uuid()) @db.Uuid
+  reference             String                          @unique @db.VarChar(100)
+  // Business day being settled (UTC midnight marker)
+  periodDate            DateTime                        @map("period_date")
+  totalAmountKobo       Int                             @map("total_amount_kobo")
+  entryCount            Int                             @default(0) @map("entry_count")
+  // Recipient snapshot (masked for display; full account stays server-side)
+  recipientLabel        String?                         @map("recipient_label") @db.VarChar(120)
+  recipientBankCode     String?                         @map("recipient_bank_code") @db.VarChar(20)
+  recipientAccountNumber String?                        @map("recipient_account_number") @db.VarChar(30)
+  provider              String                          @default("FLUTTERWAVE")
+  providerReference     String?                         @map("provider_reference") @db.VarChar(255)
+  transferStatus        SettlementStatus                @default(PREPARED) @map("transfer_status")
+  reconciliationStatus  SettlementReconciliationStatus  @default(UNRECONCILED) @map("reconciliation_status")
+  failureReason         String?                         @map("failure_reason")
+  // Stable idempotency key — the same period can never be reserved twice
+  idempotencyKey        String                          @unique @map("idempotency_key") @db.VarChar(200)
+  initiatedAt           DateTime?                       @map("initiated_at")
+  confirmedAt           DateTime?                       @map("confirmed_at")
+  failedAt              DateTime?                       @map("failed_at")
+  createdAt             DateTime                        @default(now()) @map("created_at")
+  updatedAt             DateTime                        @updatedAt @map("updated_at")
+
+  entries CommissionLedgerEntry[]
+
+  @@index([transferStatus])
+  @@index([periodDate])
+  @@map("commission_settlements")
+}
+
+model CommissionConfig {
+  // Singleton row (id = 1)
+  id                     Int      @id @default(1)
+  // 5% expressed in basis points (500 bps = 5.00%)
+  commissionRateBps      Int      @default(500) @map("commission_rate_bps")
+  businessTimezone       String   @default("Africa/Lagos") @map("business_timezone")
+  // Local hour (0-23) at which the daily settlement cycle runs
+  settlementHourLocal    Int      @default(1) @map("settlement_hour_local")
+  autoSettlementEnabled  Boolean  @default(false) @map("auto_settlement_enabled")
+  manualApprovalRequired Boolean  @default(true) @map("manual_approval_required")
+  minSettlementKobo      Int      @default(0) @map("min_settlement_kobo")
+  recipientBankCode      String?  @map("recipient_bank_code") @db.VarChar(20)
+  recipientBankName      String?  @map("recipient_bank_name") @db.VarChar(100)
+  recipientAccountNumber String?  @map("recipient_account_number") @db.VarChar(30)
+  recipientAccountName   String?  @map("recipient_account_name") @db.VarChar(100)
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@map("commission_config")
 }

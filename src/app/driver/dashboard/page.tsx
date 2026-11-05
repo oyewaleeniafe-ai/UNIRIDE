@@ -47,6 +47,8 @@ export default async function DriverDashboard() {
         where: {
           status: 'PENDING',
           driverId: null,
+          // Never surface an unpaid booking (trip rows are created before checkout).
+          payments: { some: { status: 'SUCCESSFUL' } },
         },
         include: {
           pickupLocation: true,
@@ -71,11 +73,13 @@ export default async function DriverDashboard() {
       })
     : [];
 
+  // Driver earnings are the NET after school commission, not the fare the
+  // student paid (which also includes the platform fee).
   const totalEarnings = driver
-    ? (await prisma.trip.aggregate({
-        where: { driverId: driver.id, status: 'COMPLETED' },
-        _sum: { totalFare: true },
-      }))._sum.totalFare || 0
+    ? ((await prisma.driverEarning.aggregate({
+        where: { driverId: driver.id },
+        _sum: { netAmountKobo: true },
+      }))._sum.netAmountKobo || 0) / 100
     : 0;
 
   const activeTripPaid = activeTrip

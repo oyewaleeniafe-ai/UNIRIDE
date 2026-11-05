@@ -48,6 +48,8 @@ export default function LoginPage() {
         router.push('/student/dashboard');
       } else if (role === 'DRIVER') {
         router.push('/driver/dashboard');
+      } else if (role === 'ADMIN') {
+        router.push('/admin/commission');
       } else {
         router.push('/');
       }

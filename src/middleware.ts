@@ -52,12 +52,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/student/dashboard', request.url));
   }
 
+  // Role-based protection: admin routes (school commission management)
+  if (pathname.startsWith('/admin') && token?.role && token.role !== 'ADMIN') {
+    return NextResponse.redirect(
+      new URL(
+        token.role === 'DRIVER' ? '/driver/dashboard' : '/student/dashboard',
+        request.url
+      )
+    );
+  }
+
   // If authenticated user tries to access login/register, redirect to their dashboard
   if (isPublicRoute && token) {
     if (token.role === 'STUDENT') {
       return NextResponse.redirect(new URL('/student/dashboard', request.url));
     } else if (token.role === 'DRIVER') {
       return NextResponse.redirect(new URL('/driver/dashboard', request.url));
+    } else if (token.role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin/commission', request.url));
     }
   }
 
@@ -69,6 +81,7 @@ export const config = {
     '/',
     '/student/:path*',
     '/driver/:path*',
+    '/admin/:path*',
     '/login',
     '/register/:path*',
   ],

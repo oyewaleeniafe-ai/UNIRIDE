@@ -34,6 +34,16 @@ export type AuditAction =
   | 'payout.initiated'
   | 'payout.succeeded'
   | 'payout.failed'
+  // School commission actions
+  | 'commission.accrued'
+  | 'commission.backfilled'
+  | 'commission.reversed'
+  | 'commission.config_updated'
+  | 'commission.settlement_prepared'
+  | 'commission.settlement_cancelled'
+  | 'commission.transfer_initiated'
+  | 'commission.transfer_confirmed'
+  | 'commission.transfer_failed'
   // Generic
   | 'system.error';
 

@@ -15,6 +15,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  Percent,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -39,6 +40,11 @@ const driverLinks: NavLink[] = [
   { href: '/driver/profile', label: 'Profile', icon: User },
 ];
 
+// School administrators (commission management & reconciliation).
+const adminLinks: NavLink[] = [
+  { href: '/admin/commission', label: 'Commission', icon: Percent },
+];
+
 function BrandMark({ className = '' }: { className?: string }) {
   return (
     <span
@@ -53,8 +59,10 @@ function BrandMark({ className = '' }: { className?: string }) {
 export default function Navigation({ role }: { role: string }) {
   const pathname = usePathname();
   const { setTheme, resolvedTheme } = useTheme();
-  const links = role === 'STUDENT' ? studentLinks : driverLinks;
-  const basePath = role === 'STUDENT' ? '/student' : '/driver';
+  const links =
+    role === 'STUDENT' ? studentLinks : role === 'ADMIN' ? adminLinks : driverLinks;
+  const basePath =
+    role === 'STUDENT' ? '/student' : role === 'ADMIN' ? '/admin' : '/driver';
 
   const toggleTheme = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
@@ -91,7 +99,11 @@ export default function Navigation({ role }: { role: string }) {
       <aside className="hidden lg:flex flex-col w-60 bg-[var(--surface)] border-r border-[var(--border-color)] h-screen sticky top-0 pt-14 px-3 pb-4">
         <div className="px-3 pt-4 pb-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-fg)]">
-            {role === 'STUDENT' ? 'Passenger Portal' : 'Driver Portal'}
+            {role === 'STUDENT'
+              ? 'Passenger Portal'
+              : role === 'ADMIN'
+                ? 'School Administration'
+                : 'Driver Portal'}
           </p>
         </div>
 

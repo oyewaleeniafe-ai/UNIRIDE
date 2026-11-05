@@ -30,7 +30,13 @@ export default async function DriverRidesPage() {
 
   const pendingTrips = driver
     ? await prisma.trip.findMany({
-        where: { status: 'PENDING', driverId: null },
+        where: {
+          status: 'PENDING',
+          driverId: null,
+          // Only offer rides that are actually paid for. A trip row is created
+          // before checkout, so an unpaid/failed booking must never reach drivers.
+          payments: { some: { status: 'SUCCESSFUL' } },
+        },
         include: {
           pickupLocation: true,
           dropoffLocation: true,

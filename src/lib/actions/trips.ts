@@ -9,6 +9,7 @@ import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { calculateFare } from '@/lib/fares';
+import { accrueEarningForTrip } from '@/lib/commission/earnings';
 
 async function getRateLimitId(): Promise<string> {
   const h = await headers();
@@ -161,6 +162,16 @@ export async function acceptTrip(tripId: string) {
       if (!trip) throw new Error('Trip not found.');
       if (trip.status !== 'PENDING' || trip.driverId !== null) {
         throw new Error('This ride is no longer available.');
+      }
+
+      // A trip row is created before checkout, so guard against accepting a
+      // booking whose payment never succeeded (failed/abandoned checkout).
+      const paid = await tx.payment.findFirst({
+        where: { tripId, status: 'SUCCESSFUL' },
+        select: { id: true },
+      });
+      if (!paid) {
+        throw new Error('This ride has not been paid for yet.');
       }
 
       const updated = await tx.trip.update({
@@ -365,6 +376,23 @@ async function completeTripImpl(tripId: string) {
     where: { id: driver.id },
     data: { totalTrips: { increment: 1 } },
   });
+
+  // School commission accrual: record the driver's eligible earning + the 5%
+  // commission for this completed, already-paid ride. Idempotent (UNIQUE on
+  // earning.trip_id); if this transiently fails the settlement job's backfill
+  // pass records it later, so ride completion itself must not fail.
+  try {
+    await accrueEarningForTrip(tripId);
+  } catch (e) {
+    console.error('[COMMISSION] Failed to accrue earning for trip', tripId, e);
+    logAudit({
+      userId,
+      action: 'system.error',
+      entity: 'DriverEarning',
+      entityId: tripId,
+      details: { message: e instanceof Error ? e.message : String(e) },
+    }).catch(() => {});
+  }
 
   revalidatePath('/driver/rides');
   revalidatePath('/driver/dashboard');

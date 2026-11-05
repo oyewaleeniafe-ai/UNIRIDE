@@ -8,10 +8,36 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dbPath = path.resolve(__dirname, 'test.db');
 
-const prisma = new PrismaClient({
+const basePrisma = new PrismaClient({
   datasources: {
     db: {
       url: `file:${dbPath}`,
+    },
+  },
+});
+
+/**
+ * The SQLite connector has no native `Json` type, so the test schema stores
+ * `AuditLog.details` as a String while production uses `Json`. Without this
+ * extension every audit write would fail silently (the audit helper swallows
+ * its own errors) and the audit trail would be empty in tests.
+ *
+ * The extension serialises the object to JSON exactly like the production
+ * `Json` column would store it, so assertions can parse it back.
+ */
+const prisma = basePrisma.$extends({
+  query: {
+    auditLog: {
+      async create({ args, query }) {
+        const data = args.data as { details?: unknown };
+        if (data && typeof data.details === 'object' && data.details !== null) {
+          args.data = {
+            ...data,
+            details: JSON.stringify(data.details),
+          } as typeof args.data;
+        }
+        return query(args);
+      },
     },
   },
 });
@@ -22,6 +48,10 @@ export { prisma };
  * Clean all tables in the correct order (respect foreign keys).
  */
 export async function cleanDatabase() {
+  await prisma.commissionLedgerEntry.deleteMany();
+  await prisma.commissionSettlement.deleteMany();
+  await prisma.driverEarning.deleteMany();
+  await prisma.commissionConfig.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.payout.deleteMany();
   await prisma.payment.deleteMany();

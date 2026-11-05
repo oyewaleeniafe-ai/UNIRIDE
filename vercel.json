@@ -1,4 +1,10 @@
 {
   "buildCommand": "prisma generate && next build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/commission/settlements/run",
+      "schedule": "5 0 * * *"
+    }
+  ]
 }

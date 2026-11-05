@@ -24,6 +24,8 @@ import type {
   PayoutResult,
   WebhookEvent,
 } from './types';
+import { accrueEarningForTrip } from '@/lib/commission/earnings';
+import { verifySettlement } from '@/lib/commission/settlements';
 
 export type { Provider } from './types';
 export { maskAccountNumber, FLUTTERWAVE_WEBHOOK_HEADER } from './types';
@@ -268,6 +270,10 @@ export async function verifyPayment(reference: string) {
       },
     }).catch(() => {});
 
+    // If the ride was already completed (edge case), accrue the earning now.
+    // Normally completion happens after payment, so this is a no-op.
+    accrueEarningForTrip(payment.tripId).catch(() => {});
+
     return { success: true as const, paymentId: payment.id };
   }
 
@@ -298,6 +304,30 @@ export async function handleWebhookProvider(event: WebhookEvent): Promise<boolea
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload = JSON.parse(event.rawBody) as any;
+
+  // Transfer events (commission settlements, driver payouts) are reconciled
+  // against the Flutterwave Transfers API — never trusted from the payload.
+  const eventName = String(payload.event ?? '');
+  if (eventName.startsWith('transfer.')) {
+    const transferRef = String(
+      (payload.data as Record<string, unknown> | undefined)?.reference ??
+        payload.reference ??
+        ''
+    );
+    if (transferRef) {
+      const settlement = await prisma.commissionSettlement.findFirst({
+        where: { OR: [{ providerReference: transferRef }, { reference: transferRef }] },
+        select: { id: true },
+      });
+      if (settlement) {
+        // Verification fetches the authoritative status from Flutterwave.
+        await verifySettlement(settlement.id).catch(() => undefined);
+      }
+    }
+    // Driver payouts: re-fetch is handled by the payout flow; acknowledge.
+    return true;
+  }
+
   // Flutterwave nests tx_ref under `data`; keep top-level fallbacks for
   // compatibility with other event shapes.
   const eventData = (payload.data ?? {}) as Record<string, unknown>;
@@ -398,6 +428,10 @@ export async function handleWebhookProvider(event: WebhookEvent): Promise<boolea
       }).catch(() => {});
     }
 
+    // No-op unless the ride is already completed (accrual eligibility check
+    // lives inside accrueEarningForTrip).
+    accrueEarningForTrip(payment.tripId).catch(() => {});
+
     return true;
   }
 
@@ -476,6 +510,14 @@ export async function createPayoutForTrip({
     accountName: driverAccount?.accountName ?? undefined,
   };
 
+  // School commission is withheld from the driver's allocation: the driver is
+  // paid their NET earnings (ride fare − 5% commission), while the commission
+  // is settled to the school separately through the commission ledger. Falls
+  // back to the full ride fare for trips recorded before this feature.
+  const earning = await prisma.driverEarning.findUnique({ where: { tripId } });
+  const payoutAmountKobo = earning ? earning.netAmountKobo : toProviderAmount(payment.rideFare);
+  const payoutAmountNaira = payoutAmountKobo / 100;
+
   const payoutReference = `ccab-payout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
   const payout = await prisma.payout.create({
@@ -484,7 +526,7 @@ export async function createPayoutForTrip({
       driverId: driverDbId,
       paymentId,
       provider: 'FLUTTERWAVE',
-      amount: payment.rideFare,
+      amount: payoutAmountNaira,
       status: 'PENDING',
     },
   });
@@ -492,7 +534,7 @@ export async function createPayoutForTrip({
   const providerResult = await createFlutterwavePayout({
     provider: 'FLUTTERWAVE',
     driverId: driverDbId,
-    amountInSmallestUnit: toProviderAmount(payment.rideFare),
+    amountInSmallestUnit: payoutAmountKobo,
     recipient,
     reference: payoutReference,
   });
@@ -526,6 +568,18 @@ export async function createPayoutForTrip({
       initiatedAt: new Date(),
     },
   });
+
+  // Reflect the payout outcome on the earning record (driver dashboard).
+  // SUCCESS here mirrors the provider's synchronous response; finality is
+  // still governed by Flutterwave's own transfer state.
+  if (earning) {
+    await prisma.driverEarning
+      .update({
+        where: { id: earning.id },
+        data: { payoutStatus: payoutStatus === 'SUCCESS' ? 'PAID' : 'UNPAID' },
+      })
+      .catch(() => {});
+  }
 
   return { providerReference: providerRef, status: payoutStatus, payoutId: payout.id, provider: 'FLUTTERWAVE' };
 }

@@ -57,6 +57,8 @@ model Driver {
   assignedTrips   Trip[]
   ratings         Rating[]
   paymentAccount  DriverPaymentAccount?
+  earnings        DriverEarning[]
+  commissionEntries CommissionLedgerEntry[]
 }
 
 model Vehicle {
@@ -105,6 +107,7 @@ model Trip {
   ratings         Rating[]
   safetyAlerts    SafetyAlert[]
   payments        Payment[]
+  earning         DriverEarning?
 
   @@index([status])
   @@index([driverId])
@@ -260,6 +263,7 @@ model Payment {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip    Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
   payouts Payout[]
+  earning DriverEarning?
 
   @@index([tripId])
   @@index([status])
@@ -300,4 +304,102 @@ model Payout {
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([status])
+}
+
+// ─── School commission system (SQLite mirror of prisma/schema.prisma) ───
+// Status/type columns are plain strings here to match this test schema's style.
+// Money columns are INTEGER KOBO, same as production.
+
+model DriverEarning {
+  id                   String   @id @default(uuid())
+  driverId             String
+  tripId               String   @unique
+  paymentId            String?  @unique
+  paymentReference     String?
+  currency             String   @default("NGN")
+  eligibleAmountKobo   Int
+  commissionRateBps    Int
+  commissionAmountKobo Int
+  netAmountKobo        Int
+  earningDate          DateTime
+  businessTimezone     String   @default("Africa/Lagos")
+  status               String   @default("ACCRUED")
+  payoutStatus         String   @default("UNPAID")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  driver        Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  trip          Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  payment       Payment? @relation(fields: [paymentId], references: [id])
+  ledgerEntries CommissionLedgerEntry[]
+
+  @@index([driverId, earningDate])
+  @@index([earningDate])
+  @@index([status])
+}
+
+model CommissionLedgerEntry {
+  id                String   @id @default(uuid())
+  driverId          String
+  earningId         String?
+  settlementId      String?
+  amountKobo        Int
+  commissionRateBps Int
+  periodDate        DateTime
+  entryType         String   @default("ACCRUAL")
+  status            String   @default("OUTSTANDING")
+  reversalOfId      String?
+  note              String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  driver     Driver                @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  earning    DriverEarning?        @relation(fields: [earningId], references: [id])
+  settlement CommissionSettlement? @relation(fields: [settlementId], references: [id])
+
+  @@index([status, periodDate])
+  @@index([driverId, periodDate])
+  @@index([settlementId])
+}
+
+model CommissionSettlement {
+  id                     String   @id @default(uuid())
+  reference              String   @unique
+  periodDate             DateTime
+  totalAmountKobo        Int
+  entryCount             Int      @default(0)
+  recipientLabel         String?
+  recipientBankCode      String?
+  recipientAccountNumber String?
+  provider               String   @default("FLUTTERWAVE")
+  providerReference      String?
+  transferStatus         String   @default("PREPARED")
+  reconciliationStatus   String   @default("UNRECONCILED")
+  failureReason          String?
+  idempotencyKey         String   @unique
+  initiatedAt            DateTime?
+  confirmedAt            DateTime?
+  failedAt               DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  entries CommissionLedgerEntry[]
+
+  @@index([transferStatus])
+  @@index([periodDate])
+}
+
+model CommissionConfig {
+  id                     Int      @id @default(1)
+  commissionRateBps      Int      @default(500)
+  businessTimezone       String   @default("Africa/Lagos")
+  settlementHourLocal    Int      @default(1)
+  autoSettlementEnabled  Boolean  @default(false)
+  manualApprovalRequired Boolean  @default(true)
+  minSettlementKobo      Int      @default(0)
+  recipientBankCode      String?
+  recipientBankName      String?
+  recipientAccountNumber String?
+  recipientAccountName   String?
+  updatedAt              DateTime @updatedAt
 }
