@@ -122,6 +122,23 @@ describe('driver bank account verification', () => {
 
   it('saves unverified details when the lookup cannot be reached', async () => {
     const { driver } = await signInDriver();
+    mockResolveResponse({ status: 'error', message: 'Invalid authorization key' }, 401);
+
+    const result = await saveDriverBankAccount({
+      bankCode: '058',
+      accountNumber: '0123456789',
+      accountName: 'Ada Driver',
+    });
+
+    // A bad API key says nothing about the driver's account, so it must not
+    // stop them saving; it just cannot verify them.
+    expect('success' in result && result.success).toBe(true);
+    const saved = await prisma.driverPaymentAccount.findUnique({ where: { driverId: driver.id } });
+    expect(saved?.verificationStatus).toBe('PENDING');
+  });
+
+  it('saves unverified details when the lookup cannot be reached', async () => {
+    const { driver } = await signInDriver();
     globalThis.fetch = vi.fn(async () => {
       throw new Error('network down');
     }) as unknown as typeof fetch;

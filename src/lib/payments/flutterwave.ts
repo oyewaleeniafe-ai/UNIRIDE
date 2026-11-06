@@ -314,7 +314,27 @@ export async function resolveBankAccount({
   }
 
   const accountName = result.data?.account_name
-  if (!response.ok || typeof accountName !== 'string' || !accountName.trim()) {
+  if (!response.ok) {
+    // Only an answer about the account itself can block a driver from saving.
+    // Credential problems (401/403), provider outages (5xx) and rate limits
+    // (429) say nothing about the account, so the details are kept unverified
+    // rather than rejected.
+    const configOrProviderFault =
+      response.status === 401 ||
+      response.status === 403 ||
+      response.status === 429 ||
+      response.status >= 500
+
+    return {
+      error:
+        typeof result.message === 'string' && result.message
+          ? result.message
+          : 'Could not verify this bank account. Check the bank, account number and name.',
+      ...(configOrProviderFault ? { unavailable: true } : {}),
+    }
+  }
+
+  if (typeof accountName !== 'string' || !accountName.trim()) {
     return {
       error:
         typeof result.message === 'string' && result.message
