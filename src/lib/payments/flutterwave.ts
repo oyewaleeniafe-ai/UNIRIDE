@@ -89,7 +89,18 @@ export async function createPayment(
   const result = (await response.json()) as Record<string, unknown>
 
   if (!response.ok) {
-    return { error: String(result.message ?? result.error ?? 'Flutterwave checkout creation failed') }
+    // Keep the provider's own detail: its generic "missing parameters" reply
+    // names nothing on its own, and without it a failed init is undiagnosable
+    // from the app side.
+    const detail =
+      result.data && typeof result.data === 'object'
+        ? ` (${JSON.stringify(result.data).slice(0, 300)})`
+        : ''
+    return {
+      error: `${String(
+        result.message ?? result.error ?? 'Flutterwave checkout creation failed'
+      )} [HTTP ${response.status}]${detail}`,
+    }
   }
 
   const data = result.data as Record<string, unknown> | null
