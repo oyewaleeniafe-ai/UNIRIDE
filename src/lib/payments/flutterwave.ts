@@ -51,8 +51,16 @@ export async function createPayment(
     redirect_url: `${APP_URL}/api/payments/verify?reference=${request.reference}`,
     customer: {
       email: request.email,
-      ...(request.metadata.name ? { name: request.metadata.name } : {}),
-      ...(request.metadata.phone ? { phonenumber: request.metadata.phone } : {}),
+      // Flutterwave rejects the checkout ("One or more required parameters
+      // missing") when the customer object carries no name, so always send
+      // one — the email's local part is a safe fallback.
+      name:
+        (typeof request.metadata.name === 'string' && request.metadata.name.trim()) ||
+        request.email.split('@')[0] ||
+        'CampusCab Student',
+      ...(typeof request.metadata.phone === 'string' && request.metadata.phone
+        ? { phonenumber: request.metadata.phone }
+        : {}),
     },
     customizations: {
       title: 'CampusCab Ride',
@@ -60,7 +68,7 @@ export async function createPayment(
       logo: 'https://cdn.flutterwave.com/img/logo.png',
     },
     payment_options: 'card, ussd',
-    configurations: {
+    configuration: {
       session_duration: 10,
       max_retry_attempt: 5,
     },

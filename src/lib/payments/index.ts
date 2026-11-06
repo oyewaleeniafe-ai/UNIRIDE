@@ -139,6 +139,12 @@ export async function createPayment({
     },
   }).catch(() => {});
 
+  // Flutterwave's checkout needs a customer name; the booking student's own
+  // name is the honest value to give it.
+  const customer = await prisma.user
+    .findUnique({ where: { id: userId }, select: { name: true, phone: true } })
+    .catch(() => null);
+
   const providerResult = await createFlutterwavePayment({
     provider: 'FLUTTERWAVE',
     email,
@@ -147,6 +153,8 @@ export async function createPayment({
     metadata: {
       tripId,
       userId,
+      name: customer?.name ?? '',
+      phone: customer?.phone ?? '',
       passengerCount: String(passengerCount),
       rideFare: String(rideFare),
       platformFee: String(platformFee),

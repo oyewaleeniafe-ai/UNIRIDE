@@ -286,6 +286,16 @@ describe('Flutterwave payments', () => {
       expect(payload.tx_ref).toMatch(/^ccab-/)
       expect(payload.redirect_url).toContain(payload.tx_ref)
 
+      // Flutterwave rejects the checkout with "One or more required parameters
+      // missing" when the customer object has no name, and reads checkout
+      // settings from `configuration` (singular).
+      expect(typeof payload.customer).toBe('object')
+      expect(payload.customer.email).toBe(student.email)
+      expect(typeof payload.customer.name).toBe('string')
+      expect(payload.customer.name.trim().length).toBeGreaterThan(0)
+      expect(payload.configuration).toBeDefined()
+      expect(payload.configurations).toBeUndefined()
+
       // Exactly one payment record — no duplicate payment rows.
       const rows = await prisma.payment.findMany({ where: { tripId: trip.id } })
       expect(rows).toHaveLength(1)
