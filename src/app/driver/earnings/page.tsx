@@ -7,6 +7,7 @@ import {
 } from '@/lib/commission/daily';
 import { businessDayKey, dayKeyToIso } from '@/lib/commission/time';
 import { formatKobo, rateBpsToPercent } from '@/lib/commission/money';
+import PayoutPanel from './PayoutPanel';
 
 export default async function DriverEarningsPage() {
   const session = await auth();
@@ -17,7 +18,7 @@ export default async function DriverEarningsPage() {
   const config = await getCommissionConfig();
   const todayKey = businessDayKey(new Date(), config.businessTimezone);
 
-  const [today, rows, totals] = await Promise.all([
+  const [today, rows, totals, payoutAccount, unpaid] = await Promise.all([
     driver
       ? getDriverDaySummary(driver.id, todayKey)
       : Promise.resolve(null),
@@ -33,7 +34,20 @@ export default async function DriverEarningsPage() {
           _count: { id: true },
         })
       : Promise.resolve(null),
+    driver
+      ? prisma.driverPaymentAccount.findUnique({ where: { driverId: driver.id } })
+      : Promise.resolve(null),
+    driver
+      ? prisma.driverEarning.aggregate({
+          where: { driverId: driver.id, status: 'ACCRUED', payoutStatus: 'UNPAID' },
+          _sum: { netAmountKobo: true },
+          _count: { id: true },
+        })
+      : Promise.resolve(null),
   ]);
+
+  const unpaidKobo = unpaid?._sum.netAmountKobo ?? 0;
+  const unpaidRides = unpaid?._count.id ?? 0;
 
   // Week-to-date (business timezone, Sunday-start week).
   const weekStartKey = new Date(
@@ -114,6 +128,23 @@ export default async function DriverEarningsPage() {
           <p className="text-xs text-[var(--muted)] mt-0.5">{allTimeCount} rides</p>
         </div>
       </div>
+
+      {/* Payout: bank details + request payment */}
+      <PayoutPanel
+        bank={
+          payoutAccount?.accountNumber
+            ? {
+                bankName: payoutAccount.bankName,
+                accountNumber: payoutAccount.accountNumber,
+                accountName: payoutAccount.accountName,
+                verified: payoutAccount.verificationStatus === 'VERIFIED',
+              }
+            : null
+        }
+        unpaidKobo={unpaidKobo}
+        unpaidRides={unpaidRides}
+        payoutsEnabled={Boolean(process.env.FLUTTERWAVE_TRANSFERS_ENABLED)}
+      />
 
       {/* Earnings History */}
       <div>

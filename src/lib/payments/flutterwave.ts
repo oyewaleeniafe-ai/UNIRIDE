@@ -264,6 +264,68 @@ export function normalizeWebhookEvent(
   return { status: 'pending' }
 }
 
+export type BankAccountResolution =
+  | { accountName: string }
+  | {
+      error: string;
+      /**
+       * True when the lookup could not be attempted or reached Flutterwave
+       * (missing key, network failure). A non-retryable error means the
+       * provider answered and rejected the account itself.
+       */
+      unavailable?: boolean;
+    }
+
+/**
+ * Resolve a Naira bank account to its registered account name.
+ *
+ * This is the only trustworthy way to know who owns an account number — the
+ * driver-typed name is never used as the payee name when the lookup succeeds.
+ * Docs: https://developer.flutterwave.com/reference/resolve_account
+ */
+export async function resolveBankAccount({
+  bankCode,
+  accountNumber,
+}: {
+  bankCode: string
+  accountNumber: string
+}): Promise<BankAccountResolution> {
+  if (!SECRET_KEY) {
+    return { error: envError('FLUTTERWAVE_SECRET_KEY'), unavailable: true }
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`${FLUTTERWAVE_BASE_URL}/accounts/resolve`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        account_number: accountNumber,
+        account_bank: bankCode,
+      }),
+    })
+  } catch {
+    return { error: 'Could not reach Flutterwave to verify this account.', unavailable: true }
+  }
+
+  const result = (await response.json().catch(() => ({}))) as {
+    message?: string
+    data?: { account_name?: unknown }
+  }
+
+  const accountName = result.data?.account_name
+  if (!response.ok || typeof accountName !== 'string' || !accountName.trim()) {
+    return {
+      error:
+        typeof result.message === 'string' && result.message
+          ? result.message
+          : 'Could not verify this bank account. Check the bank, account number and name.',
+    }
+  }
+
+  return { accountName: accountName.trim() }
+}
+
 /**
  * Initiate a driver payout via Flutterwave transfers.
  *

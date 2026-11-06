@@ -933,7 +933,11 @@ describe('Flutterwave payments', () => {
 
   describe('PalmPay and OPay removal', () => {
     it('has no PalmPay or OPay references left in src', () => {
-      const offenders = srcOffenders(/\bpalmpay\b|\bopay\b/i)
+      // The bank catalogue names OPay/PalmPay only as payout destinations for
+      // drivers — they are bank codes, not payment-provider integrations.
+      const offenders = srcOffenders(/\bpalmpay\b|\bopay\b/i).filter(
+        (file) => !file.replace(/\\/g, '/').endsWith('payments/banks.ts')
+      )
       expect(offenders).toEqual([])
     })
 

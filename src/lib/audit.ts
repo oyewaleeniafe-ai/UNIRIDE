@@ -21,6 +21,7 @@ export type AuditAction =
   | 'driver.went_online'
   | 'driver.went_offline'
   | 'driver.inspection_submitted'
+  | 'driver.bank_details_updated'
   // Rating actions
   | 'rating.submitted'
   // Payment actions
@@ -34,6 +35,7 @@ export type AuditAction =
   | 'payout.initiated'
   | 'payout.succeeded'
   | 'payout.failed'
+  | 'payout.requested'
   // School commission actions
   | 'commission.accrued'
   | 'commission.backfilled'
