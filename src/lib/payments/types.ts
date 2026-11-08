@@ -21,6 +21,12 @@ export interface CreatePaymentRequest {
   amountInSmallestUnit: number;
   reference: string;
   metadata: Record<string, string | number>;
+  /**
+   * Where the provider should send the customer after checkout. Defaults to
+   * the website's verification callback; the mobile app passes its own route
+   * so the browser can hand control back to the app.
+   */
+  redirectUrl?: string;
 }
 
 export interface CreatePaymentResult {

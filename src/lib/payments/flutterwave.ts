@@ -48,7 +48,9 @@ export async function createPayment(
     // Flutterwave expects amounts in major currency units (NGN), not kobo.
     amount: String(request.amountInSmallestUnit / 100),
     currency: 'NGN',
-    redirect_url: `${APP_URL}/api/payments/verify?reference=${request.reference}`,
+    redirect_url:
+      request.redirectUrl ??
+      `${APP_URL}/api/payments/verify?reference=${request.reference}`,
     customer: {
       email: request.email,
       // Flutterwave rejects the checkout ("One or more required parameters

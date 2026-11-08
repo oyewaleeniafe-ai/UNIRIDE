@@ -60,6 +60,7 @@ export async function createPayment({
   platformFee,
   totalAmount,
   email,
+  redirectUrl,
 }: {
   tripId: string;
   userId: string;
@@ -68,6 +69,8 @@ export async function createPayment({
   platformFee: number;
   totalAmount: number;
   email: string;
+  /** Optional post-checkout return URL (the mobile app supplies its own). */
+  redirectUrl?: string;
 }) {
   const existing = await prisma.payment.findFirst({
     where: { tripId, userId, status: 'SUCCESSFUL' },
@@ -150,6 +153,7 @@ export async function createPayment({
     email,
     amountInSmallestUnit: amountInKobo,
     reference,
+    ...(redirectUrl ? { redirectUrl } : {}),
     metadata: {
       tripId,
       userId,

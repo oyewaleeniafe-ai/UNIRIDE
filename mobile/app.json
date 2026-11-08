@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "CampusCab",
+    "slug": "campuscab",
+    "scheme": "campuscab",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.campuscab.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "CampusCab uses your location to set your pickup point and to send it with an SOS alert.",
+        "NSCameraUsageDescription": "CampusCab uses the camera only if you choose to take a profile photo.",
+        "NSPhotoLibraryUsageDescription": "CampusCab uses your photo library only if you choose a profile photo.",
+        "UIBackgroundModes": []
+      }
+    },
+    "android": {
+      "package": "com.campuscab.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4338ca"
+      },
+      "permissions": [
+        "INTERNET",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CampusCab uses your location to set your pickup point and to send it with an SOS alert."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#4338ca"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#0d0e15",
+          "dark": {
+            "backgroundColor": "#0d0e15"
+          }
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "apiUrl": "https://campuscab-pi.vercel.app"
+    }
+  }
+}
