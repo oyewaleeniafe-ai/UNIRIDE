@@ -12,6 +12,34 @@ Date: 2026-11-08
 | Expo config / dependency health | `npx expo-doctor` | **pass** — 20/20 checks |
 | Android JS bundle | `npx expo export --platform android` | **pass** — Hermes bundle 3.2 MB |
 | iOS JS bundle | `npx expo export --platform ios` | **pass** — Hermes bundle 3.2 MB |
+| Live mobile API | `node scripts/mobile-api-check.mjs` | **pass** — 12/12 checks on `campuscab-pi.vercel.app` |
+
+### Live API checks (after deploying `c47be9b`)
+
+```
+PASS  GET  /api/mobile/locations — 29 locations, solo ₦810, shared ₦210
+PASS  GET  /api/mobile/banks — 27 banks
+PASS  GET  /api/mobile/me without token — 401
+PASS  POST /api/mobile/auth/login — role STUDENT
+PASS  GET  /api/mobile/me — real student profile (PAY/2026/00991)
+PASS  GET  /api/mobile/driver as student — 403
+PASS  POST /api/mobile/trips rejects invalid locations — 400
+PASS  GET  /api/mobile/trips?scope=active — 3 active
+PASS  GET  /api/mobile/trips?scope=history — 0 rides
+PASS  GET  /api/mobile/notifications — 0 items
+PASS  POST /api/mobile/payments verify unknown reference — 400
+PASS  GET  /api/payments/mobile-return — campuscab://payment?…
+```
+
+The website still serves normally (`/login` 200; `/` and `/student/book` redirect to
+login with 307 when signed out).
+
+Re-run any time:
+
+```powershell
+$env:CHECK_EMAIL="you@example.com"; $env:CHECK_PASSWORD="…"
+node scripts/mobile-api-check.mjs
+```
 
 The Metro export is a full production bundle of every route and component, so it
 proves the app's imports, JSX, navigation tree and native module wiring all
@@ -22,9 +50,10 @@ resolve for both platforms.
 These need a running backend and a real device/build; both were blocked in this
 environment. Do not treat them as tested.
 
-1. **Live API round-trips** — the mobile API routes are new and only exist after
-   the backend is redeployed. They cannot be exercised until the Next.js app is
-   deployed again (Vercel) or run locally.
+1. **Authenticated write flows** (booking → checkout → accept → complete, payout)
+   were not exercised on the live API: no driver credentials were available here,
+   and payments are blocked by the Flutterwave merchant error below. The read and
+   guard paths in the table above are verified.
 2. **On-device UI interaction** — no Android emulator, Android SDK or Mac is
    installed on this Windows machine, and installing an emulator needs several GB
    of free disk (the drive had < 300 MB free).
