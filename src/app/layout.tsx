@@ -97,6 +97,9 @@ export const metadata: Metadata = {
   },
   other: {
     'google-site-verification': 'googlee5f34f8e98905347',
+    // iOS honours the manifest's display mode, but Safari on older versions
+    // still needs this legacy flag to launch without the browser chrome.
+    'apple-mobile-web-app-capable': 'yes',
   },
 };
 
