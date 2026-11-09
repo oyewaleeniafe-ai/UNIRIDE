@@ -2,122 +2,143 @@
 
 Live app: **https://campuscab-pi.vercel.app**
 
-Two ways to use CampusCab on a phone:
+There are now two ways to use CampusCab on a phone:
 
-| Phone | How to install | File needed |
+| Phone | How | File needed |
 | --- | --- | --- |
 | **iPhone** | Safari → Share → **Add to Home Screen** | none |
 | **Android** | Chrome → **Install app**, or install the APK | `campuscab-1.0.0.apk` |
 
 ---
 
-## iPhone (no App Store, no Apple Developer account)
+## iPhone — standalone PWA (no App Store, no Apple Developer account)
 
-The iPhone app is a Progressive Web App served by the same Next.js site, with the
-same login, fares, rides and payments as the website.
+The iPhone app is the same Next.js site, running as an installed Progressive Web App.
+It uses the same login, fares, rides, inspections, payments and SOS as the website.
 
-1. Open **Safari** on the iPhone (Chrome/Firefox on iOS cannot add to the home screen).
+1. Open **Safari** on the iPhone (Chrome/Firefox on iOS cannot add an app to the home
+   screen).
 2. Go to **https://campuscab-pi.vercel.app**
-3. Tap the **Share** button (square with an arrow, bottom of the screen).
-4. Scroll down and tap **Add to Home Screen**.
-5. Name it **CampusCab** → tap **Add**.
+3. Tap the **Share** button (square with up arrow), scroll down, tap **Add to Home
+   Screen**.
+4. Name it **CampusCab** → tap **Add**.
 
 A blue CampusCab icon appears on the home screen. Open it from there and it launches
-full-screen in its own window — no Safari address bar, no tabs.
+full-screen in its own window — no Safari address bar, no tabs sharing content.
 
 **Signing in:** sign in once inside the installed app. The session cookie is kept by
-iOS, so reopening the app from the home screen keeps you signed in until you sign
-out or the session expires. (If Safari's "Block All Cookies" is enabled, sessions
-will not persist — leave it off.)
+iOS, so reopening from the home screen keeps you signed in until you sign out or the
+session expires. (If Safari's "Block All Cookies" is on, sessions won't persist — leave
+that off.)
 
-**Tips**
-- Requires iOS 16.4 or newer for the best experience (16.4 is also the minimum for
-  web push). It still runs on older iOS as a home-screen web app.
-- Pull down inside the app to refresh ride status; there is no pull-to-refresh bounce.
-- If it ever looks out of date, close the app from the app switcher and reopen it —
-  the service worker checks for a new version on launch.
+**Gotchas**
+- Append `/login`, `/student/book`, `/student/rides` work inside the app; tapping the
+  CampusCab home-screen icon always opens the app shell, not Safari.
+- Pull down over the content to refresh ride status. There is no pull-to-refresh bounce.
+- If the app ever looks stale, close it from the app switcher and reopen — the service
+  worker checks for a new deployment on launch.
 
 ---
 
 ## Android
 
-**Option A — Chrome install (no file needed)**
-1. Open **https://campuscab-pi.vercel.app** in Chrome.
-2. Tap the **⋮** menu → **Install app** (or "Add to Home screen").
+**Option A — no file needed (Chrome, no Play Store)**
+1. Open **https://campuscab-pi.vercel.app** in Chrome on the phone.
+2. Tap the **⋮** menu → **Install app** (or "Add to Home screen" → **Install**).
 3. Confirm. It opens standalone from the home screen.
 
-**Option B — the APK (native app, no Play Store)**
-
-1. Copy `campuscab-1.0.0.apk` to the phone (USB cable, or send it to yourself and
-   download it on the phone).
+**Option B — the native APK (no Play Store, direct install)**
+1. Copy `mobile/campuscab-1.0.0.apk` to the phone (USB cable, or send it to yourself
+   and download/open it on the phone).
 2. Open the file. Android asks to allow "Install unknown apps" for the app you are
-   opening it from — allow it for that app only.
-3. Tap **Install**, then **Open**.
+   opening it from — allow it **for that app only** (it is not a system-wide switch).
+3. Tap **Install** → **Open**.
 
-Size 90 MB (94,331,290 bytes), version 1.0.0, package `com.campuscab.app`.
-SHA-256 `048ef70908fa7d46931e478493772ccaec56e24a953dcc1a6ef64c7c6e485501` — on
-Windows check it with `certutil -hashfile campuscab-1.0.0.apk SHA256`.
+| File | Size | Notes |
+| --- | --- | --- |
+| `campuscab-1.0.0.apk` | 90 MB (94,331,290 bytes) | direct install over USB or by copying |
+| `campuscab-1.0.0.aab` | 66 MB (66,044,043 bytes) | Android App Bundle for Google Play / internal track only, cannot install directly |
 
-The "unknown source" warning is expected: this build is distributed directly, not
-through Play.
+Hash check on Windows: `certutil -hashfile campuscab-1.0.0.apk SHA256` should print
+`048ef70908fa7d46931e478493772ccaec56e24a953dcc1a6ef64c7c6e485501`; for the AAB
+`b93c85813b49b6457b88bc698db072ebd9d0fc1b6044570228869676862c09b4`.
 
----
+Locally (repo root → `mobile/dist/`): the same files are already there if you have the
+repository. The AAB is in the same folder as the APK.
 
-## What works offline (and what must never "work" offline)
-
-Cached: the app shell, brand icons and the offline page — enough to open the app
-and see a clear "you're offline" screen.
-
-Never cached, never faked offline:
-
-- `/api/*` — every auth, fare, location, booking, payment and verification call.
-- `/student`, `/driver`, `/admin` pages (private, per-user data).
-- Any response marked `Cache-Control: private` or `no-store`.
-- Anything that is not a `GET` request.
-
-So with no connection you cannot book, pay for, confirm or cancel a ride. You get
-the offline page instead of a stale confirmation — no ride is ever charged or
-booked from cached data.
+The "Install unknown apps" warning is expected — no Play Store receipt, because this is
+distributed directly, not through Play.
 
 ---
 
-## Push notifications — status
+## PWA technical setup (so installs actually look like an app)
 
-- **Android (APK):** push notification tokens are stored by the app; delivery
-  requires FCM credentials on the backend, which are not configured.
-- **iPhone / Android PWA:** the service worker has the `push` and
-  `notificationclick` handlers ready, but **web push delivery is not enabled**.
-  It needs a VAPID key pair (`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` /
-  `VAPID_SUBJECT`), a `web-push` sender in the backend, and a subscribe step in the
-  app. None of those are configured, so **no web push notifications are sent**.
+All of this ships from `public/` and is generated by one script.
 
-In-app notifications (the bell / notifications list) work normally on both
-platforms, because they come from the existing backend.
+| File | What it does |
+| --- | --- |
+| `public/manifest.json` | name `CampusCab`, display `standalone`, 3 icons (192, 512, maskable 512), two app shortcuts (Book a ride, My rides), start URL `/` |
+| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` / `apple-touch-icon.png` | indigo `#4338ca` tile, white `CC` + ride bar; the maskable one keeps the glyph inside the safe zone |
+| `public/offline.html` | branded offline fallback served by the service worker |
+| `public/sw.js` | safe caching: only copies of public pages, never `/api`, never `/student|/driver|/admin`, never `Cache-Control: private / no-store`. offline = `/offline.html`, never a cached booking or payment |
+| `src/app/layout.tsx` | manifest link, apple-touch-icon, `application-name`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-title`, `apple-mobile-web-app-status-bar-style`, and light/dark theme-color matching the manifest |
+| `src/app/globals.css` | safe-area padding, no rubber-band overscroll, no tap highlight, size to the visual viewport in standalone |
+
+Re-generate the icons any time the brand changes:
+```
+cd campus-cab-app
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1
+```
+(Requires `System.Drawing`; fine on Windows.)
+
+---
+
+## Push notifications — actual status
+
+| Platform | Session push | Needs from you |
+| --- | --- | --- |
+| Android APK | token stored by the app, but **no deliveries yet** | FCM credentials on the backend |
+| iPhone / Android PWA | **not enabled** | a VAPID key pair (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`), the `web-push` package wired into the backend, and a subscribing step in the app |
+
+The service worker already has the `push` and `notificationclick` handlers, so as soon
+as the backend sends a VAPID-signed push, an installed PWA on iOS 16.4+ / Android will
+show it. Nothing is being "pretended to work" — the channel exists, the credentials and
+sender are what's missing. The in-app notification bell and the notifications list work
+normally on every platform because they come from the existing backend.
 
 ---
 
 ## Testing report
 
-Checked against the live deployment after commit `6e3302f`:
+Checked live after commit `8816830`:
 
 | Check | Result |
 | --- | --- |
-| `/manifest.json` | 200 `application/json` — name `CampusCab`, display `standalone`, 3 icons, theme `#4338ca` |
-| `/sw.js` | 200 `application/javascript`, 6,082 bytes, `node --check` passes |
-| `/offline.html` | 200 `text/html`, 3,010 bytes |
-| `/icon-192.png`, `/icon-512.png`, `/icon-maskable-512.png`, `/apple-touch-icon.png` | 200 `image/png` (1.5 KB / 5.8 KB / 4.9 KB / 1.4 KB), valid PNG headers |
-| Icon artwork | rendered and visually checked: indigo `#4338ca` tile, white `CC` and ride bar |
-| `<head>` of `/login` | `link rel=manifest`, `link rel=apple-touch-icon` (180×180), `meta application-name=CampusCab`, `meta apple-mobile-web-app-title`, `meta apple-mobile-web-app-status-bar-style`, `meta theme-color` (light + dark) |
-| Root redirect | `/` → 307 `/login` (unchanged) |
-| Auth guard | `/student/book` and `/driver/dashboard` → 307 to login with `callbackUrl` (unchanged) |
+| `https://campuscab-pi.vercel.app/manifest.json` | 200 `application/json`, name `CampusCab`, display `standalone`, 3 icons, 2 shortcuts, theme `#4338ca`, start URL `/` |
+| `https://campuscab-pi.vercel.app/sw.js` | 200 `application/javascript`, 6,082 bytes, `node --check` passes |
+| `https://campuscab-pi.vercel.app/offline.html` | 200 `text/html`, 3,010 bytes |
+| `/icon-192.png` / `/icon-512.png` / `/icon-maskable-512.png` / `/apple-touch-icon.png` | 200 `image/png` (1.5 / 5.8 / 4.9 / 1.4 KB), valid PNG headers |
+| `<head>` of `/login` | `link rel=manifest`, `link rel=apple-touch-icon` (180×180), `meta application-name=CampusCab`, `meta apple-mobile-web-app-capable=yes`, `meta apple-mobile-web-app-title=CampusCab`, `meta apple-mobile-web-app-status-bar-style=default`, `meta theme-color` (light + dark) |
+| `/` redirect | 307 → `/login` (unchanged) |
+| Auth guards | `/student/book` → 307 to login with `callbackUrl`; `/driver/dashboard` → same (unchanged) |
 | Website regression | login page renders; no API or route behaviour changed |
+| Single-byte rewrite of existing meta block | 1 file changed (`layout.tsx`) — no new surface introduced |
+
+Android builds:
+| Build | Status | Profile | Artifact |
+| --- | --- | --- | --- |
+| Android APK (internal) | finished | `preview`, `buildType: apk` | 94.3 MB APK, build `afa4463f` |
+| Android AAB (internal) | finished | `production`, `buildType: app-bundle` | 66.0 MB AAB, build `69960e29` |
+
+Both uploaded from this machine and integrity-checked after download (APK: zip + v2
+signature block present; AAB: valid zip, signed manifest present).
 
 Not verified here (no hardware or credentials available on this machine):
 
-- Installing on a physical iPhone or Android phone — this is the step for the first
-  Bowen student to try, and the fastest way to find an iOS-only layout bug.
-- Web push (not enabled, see above).
-- A local `next build`: the website's `node_modules` were removed earlier to free
-  disk (the drive has < 1 GB free), so the deployment build on Vercel was the
-  compile check. It succeeded — the new manifest, service worker and icons are
-  serving from production.
+- Installing on a real iPhone or Android phone — the fastest way to find an iOS-only
+  layout bug; Apple's push and the Android FCM delivery also only reveal themselves to a
+  real device with a real account.
+- Web push delivery (not enabled, see above).
+- A local `next build`: the website's `node_modules` were removed earlier to free disk
+  (drive has < 1 GB free), so Vercel's build was the compile check. It succeeded — the new
+  manifest, service worker, icons and meta are serving from production.
