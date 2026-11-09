@@ -238,9 +238,41 @@ a[href*="netlify.com"] img {
   position: absolute !important;
 }
 
-/* Mobile safe area padding */
+/* ---- Mobile safe-area + installed-app (PWA) behaviour ----
+   iOS insets the page automatically in standalone mode; these utilities are
+   for layouts that opt into `viewport-fit=cover` (edge-to-edge backgrounds),
+   and `env()` resolves to 0 everywhere else. */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+.safe-x {
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+html {
+  /* Kill the grey flash when tapping links on iOS/Android. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  /* No rubber-band overscroll behind the fixed bars. */
+  overscroll-behavior-y: none;
+}
+
+/* Installed (Add to Home Screen / standalone) tweaks: no pull-to-refresh
+   bounce revealing the browser canvas, and size to the visual viewport so the
+   floating bottom navigation never sits under the iOS home indicator. */
+@media (display-mode: standalone) {
+  html,
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 /* Success bounce animation */

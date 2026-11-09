@@ -1,21 +1,52 @@
 {
-  "name": "Campus Cab",
-  "short_name": "Campus Cab",
-  "description": "University transportation platform - book campus cabs, shuttles, and carpools",
+  "id": "/",
+  "name": "CampusCab",
+  "short_name": "CampusCab",
+  "description": "Book campus cabs, shuttles and carpools. Safe, affordable rides for Bowen University students and drivers.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f8f9fa",
-  "theme_color": "#1a56db",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#f2f2fb",
+  "theme_color": "#4338ca",
+  "categories": ["travel", "navigation", "transportation"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Book a ride",
+      "short_name": "Book",
+      "description": "Choose a pickup and drop-off and book a ride",
+      "url": "/student/book",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "My rides",
+      "short_name": "Rides",
+      "description": "See your active and past rides",
+      "url": "/student/rides",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

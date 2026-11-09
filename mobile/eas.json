@@ -29,6 +29,15 @@
         "EXPO_PUBLIC_API_URL": "https://campuscab-pi.vercel.app"
       }
     },
+    "ios-simulator": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://campuscab-pi.vercel.app"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "android": {

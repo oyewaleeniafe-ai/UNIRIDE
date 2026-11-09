@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#4338ca" />
+  <meta name="robots" content="noindex" />
+  <title>Offline | CampusCab</title>
+  <style>
+    :root {
+      --bg: #f2f2fb;
+      --surface: #ffffff;
+      --text: #17181f;
+      --muted: #62687a;
+      --primary: #4338ca;
+      --border: #e8e9f4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d0e15;
+        --surface: #161824;
+        --text: #e8e9f2;
+        --muted: #9ba1b5;
+        --primary: #818cf8;
+        --border: #272a3f;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 12px 32px -8px rgba(16, 24, 40, 0.16);
+      text-align: center;
+    }
+    .mark {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: #4338ca;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 0.5px;
+    }
+    h1 { font-size: 20px; margin: 0 0 8px; }
+    p { font-size: 14px; line-height: 1.5; color: var(--muted); margin: 0 0 8px; }
+    .warn {
+      margin: 16px 0 20px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(245, 158, 11, 0.12);
+      color: #b45309;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: left;
+    }
+    @media (prefers-color-scheme: dark) {
+      .warn { color: #fcd34d; background: rgba(252, 211, 77, 0.12); }
+    }
+    button {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.99); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark">CC</div>
+    <h1>You’re offline</h1>
+    <p>CampusCab needs a connection to load live fares, locations and ride status.</p>
+    <div class="warn">
+      Bookings, payments and ride confirmations cannot be made offline. Nothing is
+      confirmed until the server verifies it — so no ride will be booked or charged
+      while you are offline.
+    </div>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

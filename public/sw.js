@@ -1,103 +1,213 @@
-const CACHE_VERSION = 'v2';
-const STATIC_CACHE = `campus-cab-static-${CACHE_VERSION}`;
-const PAGE_CACHE = `campus-cab-pages-${CACHE_VERSION}`;
+/* CampusCab service worker — offline fallback + safe caching.
+ *
+ * Rules that must never regress (payments and private data depend on them):
+ *   - /api/* is never intercepted or cached. Payments, auth, rides and
+ *     verification are always live requests.
+ *   - Authenticated pages (/student, /driver, /admin) are never cached.
+ *   - Responses marked Cache-Control: private or no-store are never cached.
+ *   - While online, every page/form/payment goes to the network first, so a
+ *     new deployment is visible immediately and no stale shell is served.
+ *   - Offline, the user gets /offline.html — never a cached booking or
+ *     payment confirmation.
+ * Bump CACHE_VERSION whenever the caching strategy changes.
+ */
+
+const CACHE_VERSION = 'v3';
+const STATIC_CACHE = `campuscab-static-${CACHE_VERSION}`;
+const PAGE_CACHE = `campuscab-public-pages-${CACHE_VERSION}`;
 const KEEP_CACHES = [STATIC_CACHE, PAGE_CACHE];
 
-// NOTE: Pages use NETWORK-FIRST (not cache-first). A cache-first shell is what
-// caused stale deploys to keep showing after a new version went live:
-// the old HTML was pinned in Cache Storage and never invalidated because
-// cache names never changed between deployments. Version-bump CACHE_VERSION
-// whenever the caching strategy itself changes.
+const OFFLINE_URL = '/offline.html';
+const PRECACHE_URLS = [
+  OFFLINE_URL,
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
+];
+
+// Never cached: pages that render private, per-user data.
+const PRIVATE_PREFIXES = ['/student', '/driver', '/admin'];
+
+const STATIC_EXTENSIONS = [
+  '.css',
+  '.js',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.svg',
+  '.ico',
+  '.webp',
+  '.woff',
+  '.woff2',
+];
+
+function isCacheablePath(pathname) {
+  return !PRIVATE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
+function isCacheableResponse(response) {
+  if (!response || !response.ok) return false;
+  // Only same-origin, complete (non-opaque) responses.
+  if (response.type !== 'basic') return false;
+  const cacheControl = (response.headers.get('cache-control') || '').toLowerCase();
+  if (cacheControl.includes('no-store') || cacheControl.includes('private')) {
+    return false;
+  }
+  return true;
+}
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
-
-// Delete every cache from previous versions so existing users
-// immediately drop the stale v1 shell.
-self.addEventListener('activate', (event) => {
+  // Cache each precache URL independently so one 404 cannot fail the install.
   event.waitUntil(
-    caches.keys().then((cacheNames) =>
-      Promise.all(
-        cacheNames
-          .filter((name) => !KEEP_CACHES.includes(name))
-          .map((name) => caches.delete(name))
+    caches
+      .open(STATIC_CACHE)
+      .then((cache) =>
+        Promise.all(
+          PRECACHE_URLS.map((url) => cache.add(url).catch(() => null))
+        )
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.skipWaiting())
   );
 });
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(
+          names
+            .filter((name) => !KEEP_CACHES.includes(name))
+            .map((name) => caches.delete(name))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
+
+async function networkFirstPage(request, pathname) {
+  try {
+    const response = await fetch(request);
+    if (isCacheablePath(pathname) && isCacheableResponse(response)) {
+      const copy = response.clone();
+      caches.open(PAGE_CACHE).then((cache) => cache.put(request, copy));
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    const offline = await caches.match(OFFLINE_URL);
+    if (offline) return offline;
+
+    return new Response('You are offline.', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cached = await caches.match(request);
+  const network = fetch(request)
+    .then((response) => {
+      if (isCacheableResponse(response)) {
+        const copy = response.clone();
+        caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+      }
+      return response;
+    })
+    .catch(() => cached);
+
+  return cached || network;
+}
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Non-GET requests always go to the network
+  // Anything that is not a plain GET always goes to the network.
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
 
-  // Same-origin only — never intercept cross-origin (payment providers, fonts, etc.)
+  // Same-origin only: payment provider assets, fonts, etc. are untouched.
   if (url.origin !== self.location.origin) return;
 
-  // API routes and Next.js internals: always network
+  // Never touch API traffic (auth, payments, bookings, verification).
   if (url.pathname.startsWith('/api/')) return;
+
+  // Next.js build output is content-hashed and immutable; leave it to the browser.
   if (url.pathname.startsWith('/_next/')) return;
 
-  // Navigations & pages: NETWORK-FIRST with cache fallback (offline only).
-  // The network copy is always preferred, so a new deployment is visible
-  // on the very first visit — no stale shell.
-  if (request.mode === 'navigate' || url.pathname.startsWith('/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(PAGE_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((cached) => {
-            if (cached) return cached;
-            if (request.mode === 'navigate') {
-              return new Response(
-                '<!DOCTYPE html><html><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><h1>You are offline</h1><p>Please check your internet connection and try again.</p></div></body></html>',
-                { status: 503, headers: { 'Content-Type': 'text/html' } }
-              );
-            }
-            return new Response('Offline', { status: 503 });
-          })
-        )
-    );
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstPage(request, url.pathname));
     return;
   }
 
-  // Other same-origin static assets (.css/.js/.png/.svg/.ico):
-  // stale-while-revalidate — instant response, updated in background
-  if (
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.jpg') ||
-    url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.ico') ||
-    url.pathname.endsWith('.webp')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request)
-          .then((response) => {
-            if (response && response.ok) {
-              const clone = response.clone();
-              caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-            }
-            return response;
-          })
-          .catch(() => cached);
-
-        return cached || fetchPromise;
-      })
-    );
+  if (STATIC_EXTENSIONS.some((ext) => url.pathname.endsWith(ext))) {
+    event.respondWith(staleWhileRevalidate(request));
   }
+});
+
+/* ---- Web push (used only when the backend is configured with VAPID keys) ---- */
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'CampusCab', body: 'You have a new update.', url: '/' };
+
+  if (event.data) {
+    try {
+      payload = Object.assign(payload, event.data.json());
+    } catch {
+      payload.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'CampusCab', {
+      body: payload.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: payload.tag,
+      data: { url: payload.url || '/', ...(payload.data || {}) },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  let target = '/';
+  try {
+    target = new URL(
+      (event.notification.data && event.notification.data.url) || '/',
+      self.location.origin
+    ).href;
+  } catch {
+    target = self.location.origin + '/';
+  }
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          await client.focus();
+          if ('navigate' in client) await client.navigate(target);
+          return;
+        }
+      }
+
+      await self.clients.openWindow(target);
+    })()
+  );
 });
 
 self.addEventListener('message', (event) => {

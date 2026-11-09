@@ -77,8 +77,23 @@ export const metadata: Metadata = {
     },
   },
   manifest: '/manifest.json',
+  applicationName: 'CampusCab',
+  appleWebApp: {
+    capable: true,
+    title: 'CampusCab',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.ico',
   },
   other: {
     'google-site-verification': 'googlee5f34f8e98905347',
@@ -89,9 +104,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Matches the manifest colours so the iOS/Android status bar and splash
+  // blend into the app instead of flashing white.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f9fa" },
-    { media: "(prefers-color-scheme: dark)", color: "#111318" },
+    { media: "(prefers-color-scheme: light)", color: "#f2f2fb" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0e15" },
   ],
 };
 

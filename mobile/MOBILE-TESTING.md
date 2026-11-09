@@ -1,6 +1,6 @@
 # CampusCab mobile — build & test report
 
-Date: 2026-11-08
+Date: 2026-11-09 (APK build added)
 
 ## What is verified
 
@@ -13,6 +13,7 @@ Date: 2026-11-08
 | Android JS bundle | `npx expo export --platform android` | **pass** — Hermes bundle 3.2 MB |
 | iOS JS bundle | `npx expo export --platform ios` | **pass** — Hermes bundle 3.2 MB |
 | Live mobile API | `node scripts/mobile-api-check.mjs` | **pass** — 12/12 checks on `campuscab-pi.vercel.app` |
+| Android APK | `eas build -p android -e preview` | **pass** — APK built on EAS, downloaded and integrity-checked (details below) |
 
 ### Live API checks (after deploying `c47be9b`)
 
@@ -61,8 +62,121 @@ environment. Do not treat them as tested.
    `HTTP 400 "One or more required parameters missing"` from Flutterwave's
    `/v3/payments` for the *website* too. Mobile inherits that merchant-side issue;
    the app surfaces the server's error message instead of pretending to succeed.
-4. **APK / IPA artifacts** — building requires your Expo (EAS) account login.
-   The profiles are ready (`eas.json`) but no build was started.
+4. **On-device run of the APK** — the APK now exists (see below) but it has not
+   been installed on a physical Android phone here; the checklist further down is
+   for you to run on your device.
+5. **iOS build** — configured, but no Apple Developer account was supplied, so no
+   installable iOS artifact could be produced. See the iOS section below for
+   exactly what is missing.
+
+## Android APK (built)
+
+| Item | Value |
+| --- | --- |
+| Build ID | `afa4463f-8990-4658-9932-a1a5a9b887bb` (finished, EAS cloud build) |
+| Profile | `preview` — APK, internal distribution |
+| Commit built | `66ebc673a7bb4041077dc36399e10beeb3127419` |
+| Package / version | `com.campuscab.app`, versionName `1.0.0`, versionCode `1` |
+| SDK | Expo SDK 58.0.0 (React Native 0.88.1 / React 19.3.0) |
+| Local file | `mobile/dist/campuscab-1.0.0.apk` (94,331,290 bytes) |
+| SHA-256 | `048ef70908fa7d46931e478493772ccaec56e24a953dcc1a6ef64c7c6e485501` |
+| EAS artifact | https://expo.dev/artifacts/eas/Kn_Em1WEyh2EcBPnIfespR0ky5cmSqnJKztk7jrIKUE.apk |
+| Build page | https://expo.dev/accounts/veltrix16/projects/campuscab/builds/afa4463f-8990-4658-9932-a1a5a9b887bb |
+
+Verified on the file itself: ZIP integrity (`unzip -t`) passes, APK Signing Block
+present (v2 signing, key stored on EAS), `AndroidManifest.xml` + `classes.dex` +
+Hermes `assets/index.android.bundle` present, bundle contains
+`EXPO_PUBLIC_API_URL=https://campuscab-pi.vercel.app` and the `campuscab` scheme.
+
+The APK side-loads over USB (`adb install -r dist/campuscab-1.0.0.apk`) or by
+copying it to the phone and opening it with "Install unknown apps" allowed.
+Android will warn that the app is from an unknown source because it is internally
+distributed, not from Play.
+
+Rebuild or make the Play bundle:
+
+```powershell
+cd mobile
+npx eas-cli build -p android -e preview      # APK, internal testing
+npx eas-cli build -p android -e production   # AAB for Google Play
+eas build:list --platform android --limit 5  # check status without waiting
+eas build:download --id <build-id>           # fetch an artifact later
+```
+
+## iOS (configured; native project verified to compile)
+
+There is **no `.ipa` yet**, and none can be produced without your Apple Developer
+Program membership. That is an Apple requirement, not a code gap: installing any
+app on a physical iPhone requires a signed build tied to an Apple team, and EAS
+needs that team's credentials to sign one.
+
+What is already in place:
+
+| Item | Where |
+| --- | --- |
+| Bundle identifier `com.campuscab.app`, buildNumber 1 | `app.json` → `ios` |
+| Location / camera / photo-library permission strings (App Store rejects missing ones) | `app.json` → `ios.infoPlist` |
+| `ITSAppUsesNonExemptEncryption = false` (avoids the export-compliance question on every upload) | `app.json` → `ios.config` |
+| iPhone-only (`supportsTablet: false`), portrait, light/dark automatic | `app.json` |
+| Deep link scheme `campuscab` | `app.json` → `scheme` |
+| Push notifications via `expo-notifications` (needs an APNs key, below) | `app.json` → `plugins` |
+| iOS JS bundle compiles | `npx expo export --platform ios` — pass, 3.2 MB Hermes bundle |
+| `production` profile (App Store `.ipa`), `preview` (ad-hoc to your devices), `ios-simulator` (no Apple account needed) | `eas.json` |
+| Submit placeholders `appleId` / `ascAppId` / `appleTeamId` | `eas.json` → `submit.production.ios` |
+
+### Simulator build (proves the native iOS project compiles)
+
+| Item | Value |
+| --- | --- |
+| Build ID | `64480c5c-3ca4-4397-bb24-afec1cc2dca1` — **FINISHED** |
+| Profile | `ios-simulator` (`ios.simulator: true`, no Apple account used) |
+| Commit | `66ebc673a7bb4041077dc36399e10beeb3127419` |
+| Xcode invocation | `xcodebuild -workspace CampusCab.xcworkspace -scheme CampusCab -configuration Release -destination "generic/platform=iOS Simulator"` |
+| Architectures | arm64 + x86_64 (Pods target and `CampusCab` app target both compiled) |
+| Result | `** BUILD SUCCEEDED **`, 0 `error:` / `fatal error:` lines in the xcodebuild log |
+| Build page | https://expo.dev/accounts/veltrix16/projects/campuscab/builds/64480c5c-3ca4-4397-bb24-afec1cc2dca1 |
+
+What this proves: the generated iOS project — CocoaPods, `Info.plist`, app target,
+config plugins — compiles cleanly for both simulator architectures. The native iOS
+side is sound, not just the JS bundle. What it does **not** prove: code signing,
+APNs entitlements, or any behaviour on a physical iPhone — all of that needs the
+Apple account below.
+
+The `.tar.gz` artifact contains a simulator `CampusCab.app`. It only runs inside
+Xcode's iOS Simulator on a Mac, so it is not installable on your Windows machine
+or on an iPhone. Download it from the build page (the direct artifact URL answers
+`BUILD_NOT_FOUND` to a plain `curl`).
+
+### What you must supply
+
+1. An **Apple Developer Program membership** (US$99/year). A free Apple ID cannot
+   make an installable build; it only allows 7-day personal-team signing in Xcode.
+2. Your **Apple ID email** and **Team ID** (App Store Connect → Membership).
+3. For push notifications on iOS: an **APNs key** created in the Apple Developer
+   portal, uploaded once with `npx eas-cli credentials -p ios`.
+4. For App Store submission: an app record in App Store Connect (gives you
+   `ascAppId`), then replace the three `REPLACE_WITH_…` values in `eas.json`.
+
+### Then, in this order
+
+```powershell
+cd mobile
+npx eas-cli login                                     # already done (veltrix16)
+npx eas-cli build -p ios -e preview                   # asks for your Apple ID; registers your iPhone
+npx eas-cli device:create                             # add another iPhone to the ad-hoc list
+npx eas-cli build -p ios -e production                # .ipa for App Store
+npx eas-cli submit -p ios -e production               # needs ascAppId + appleTeamId
+```
+
+EAS will offer to create the distribution certificate and provisioning profile
+for you when it asks for your Apple ID — say yes, and let it store them.
+
+### Without an Apple account
+
+`npx eas-cli build -p ios -e ios-simulator` builds a simulator `.app` with no
+Apple credentials at all, but it only runs inside Xcode's iOS Simulator, which
+requires a Mac. On this Windows machine it cannot be run, so it is not a
+substitute for a device build.
 
 ## Reproduce the verification
 
